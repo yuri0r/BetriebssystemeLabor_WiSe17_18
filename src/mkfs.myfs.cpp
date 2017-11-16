@@ -10,6 +10,7 @@
 #include "blockdevice.h"
 #include "macros.h"
 #include <iostream>
+#define CONTAINER "container.bin"
 
 int main(int argc, char *argv[]) {
 
@@ -19,5 +20,21 @@ int main(int argc, char *argv[]) {
         for(int i=0;i<argc;i++){
             std::cout << argv[i] << std::endl ;
         }
+
+        if (argc < 2) {
+            std::cout << "usuage ./mkfs.myfs <files to be added>" ;
+            return 1;
+        }
+
+        //TODO Calculate size of Binary file
+        
+        
+        BlockDevice bd;
+        bd.create(CONTAINER);
+        bd.open(CONTAINER);
+        char example = 'c';
+
+        bd.write(0,&example);
+
     return 0;
 }
