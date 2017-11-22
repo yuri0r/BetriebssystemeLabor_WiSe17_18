@@ -25,19 +25,16 @@ int main(int argc, char *argv[]) {
     std::cout << argc << std::endl;
         BlockDevice bd;
         bd.create(CONTAINER);
+        bd.resize(10);
         bd.open(CONTAINER);
-
         
 
-        for(int i=0;i<argc;i++){
-            std::cout << argv[i] << std::endl;
-            bd.write(i,argv[i]);
-        }
+    for(int i=0;i<argc;i++){
+        std::cout << argv[i] << std::endl;
+        bd.write(i,argv[i]);
+    }
 
         //TODO Calculate size of Binary file
-        
-        
-        
-
+     bd.close();
     return 0;
 }
