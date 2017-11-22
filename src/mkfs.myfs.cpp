@@ -25,13 +25,12 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Argument count: " << argc << std::endl;
 
-    BlockDevice bd;
-    bd.create(CONTAINER);
-    bd.open(CONTAINER);
+    BlockDevice *bd  = new BlockDevice(512);
+    bd->create(CONTAINER);
 
     for(int i=0;i<argc;i++){
         std::cout << "Argument " << i << ": "  <<  argv[i] << std::endl;
-        bd.write(i+66+sizeFAT,argv[i]);         //argv[] can not exceed one block in size
+        bd->write(i+66+sizeFAT,argv[i]);         //argv[] can not exceed one block in size
     }
 
     // TODO create Superblock
