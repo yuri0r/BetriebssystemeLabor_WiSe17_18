@@ -14,19 +14,20 @@
 
 int main(int argc, char *argv[]) {
 
+    char* containerPath;
     const int maxFileSize= 2^31;  //2^31 = 2 Gigybite MAX Size allowed = 30 Gigybite
     const int sizeFAT = maxFileSize / 512 * 64;   //Size of the FAT block in blocks
     // TODO: Implement file system generation & copying of files here
 
     if (argc < 2) {
-        std::cout << "usuage ./mkfs.myfs <files to be added>";
+        std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... filen>";
         return 1;
     }
-
     std::cout << "Argument count: " << argc << std::endl;
-
+    
+    containerPath = argv[1];
     BlockDevice *bd  = new BlockDevice(512);
-    bd->create(CONTAINER);
+    bd->create(containerPath);
 
     for(int i=0;i<argc;i++){
         std::cout << "Argument " << i << ": "  <<  argv[i] << std::endl;
