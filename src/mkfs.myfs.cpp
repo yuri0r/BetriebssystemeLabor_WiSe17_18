@@ -14,6 +14,8 @@
 
 int main(int argc, char *argv[]) {
 
+    const int maxFileSize= 2^31;  //2^31 = 2 Gigybite MAX Size allowed = 30 Gigybite
+    const int sizeFAT = maxFileSize / 512 * 64;   //Size of the FAT block in blocks
     // TODO: Implement file system generation & copying of files here
 
     if (argc < 2) {
@@ -29,7 +31,7 @@ int main(int argc, char *argv[]) {
 
     for(int i=0;i<argc;i++){
         std::cout << "Argument " << i << ": "  <<  argv[i] << std::endl;
-        bd.write(i,argv[i]);
+        bd.write(i+66+sizeFAT,argv[i]);         //argv[] can not exceed one block in size
     }
 
     // TODO create Superblock
