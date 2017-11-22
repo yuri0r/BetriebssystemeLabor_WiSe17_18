@@ -52,8 +52,5 @@ int main(int argc, char *argv[]) {
 
     // TODO Calculate size of Binary file
         
-        
-        
-
     return 0;
 }
