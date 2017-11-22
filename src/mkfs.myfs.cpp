@@ -15,26 +15,29 @@
 int main(int argc, char *argv[]) {
 
     // TODO: Implement file system generation & copying of files here
-        std::cout << argc << std::endl ;
+
+
+    if (argc < 2) {
+        std::cout << "usuage ./mkfs.myfs <files to be added>";
+        return 1;
+    }
+
+    std::cout << argc << std::endl;
+        BlockDevice bd;
+        bd.create(CONTAINER);
+        bd.open(CONTAINER);
+
+        
 
         for(int i=0;i<argc;i++){
-            std::cout << argv[i] << std::endl ;
-        }
-
-        if (argc < 2) {
-            std::cout << "usuage ./mkfs.myfs <files to be added>" ;
-            return 1;
+            std::cout << argv[i] << std::endl;
+            bd.write(i,argv[i]);
         }
 
         //TODO Calculate size of Binary file
         
         
-        BlockDevice bd;
-        bd.create(CONTAINER);
-        bd.open(CONTAINER);
-        char example = 'c';
-
-        bd.write(0,&example);
+        
 
     return 0;
 }
