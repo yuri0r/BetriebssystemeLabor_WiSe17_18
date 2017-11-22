@@ -10,6 +10,7 @@
 #include "blockdevice.h"
 #include "macros.h"
 #include <iostream>
+#include <string.h>
 #define CONTAINER "container.bin"
 
 int main(int argc, char *argv[]) {
@@ -35,6 +36,19 @@ int main(int argc, char *argv[]) {
     }
 
     // TODO create Superblock
+    char* superBlockContent  = "our nice super file system of doom and citty cats <333";
+    char null = NULL;
+    char* buffer = (char*)malloc(512);
+
+    for(int i = 0; i < 512 + strlen(superBlockContent); i++) {
+        if(i < strlen(superBlockContent)){
+            buffer[i] = superBlockContent[i];
+        } else {
+            buffer[i] = null;
+        }
+    }
+
+    bd->write(0,buffer);
 
     // End of create Superblock
 
