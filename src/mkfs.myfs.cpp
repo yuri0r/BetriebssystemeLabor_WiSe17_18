@@ -130,7 +130,8 @@ void dataCreation(int argc, char* argv[])
             for(int i=0; i<size; i+=BLOCK_SIZE){ 
                 char* filewriter = filebuffer + i;
                 bd->write(DATA_ADRESS + addressCounter, filewriter);
-                writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
+                int j =  i += BD_BLOCK_SIZE;
+                if (j < size) writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
                 addressCounter++;
             }
             std::cout<<size<<std::endl;
@@ -183,7 +184,8 @@ int main(int argc, char *argv[])
 
     // TODO Calculate size of Binary file
 
-    for (int i = 0; i < 500; i++) {
+    std::cout << "--------------" << std::endl; 
+    for (int i = 0; i < 50; i++) {
         std::cout << readFat(i) << std::endl;
     }
     return 0;
