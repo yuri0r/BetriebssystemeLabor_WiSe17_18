@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
     // End of create INODES
 
     // TODO create DATA
-        int addressCounter = 0;
+    int addressCounter = 0;
     for(int i=2;i<argc;i++){
         std::streampos size;                                   
         std::ifstream file (argv[i], std::ios::in|std::ios::binary|std::ios::ate); //openfile
