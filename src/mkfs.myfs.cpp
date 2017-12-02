@@ -127,10 +127,10 @@ void dataCreation(int argc, char* argv[])
             file.seekg(0, std::ios::beg);
             file.read(filebuffer, size);
             file.close();
-            for(int i=0; i<size; i+=BLOCK_SIZE){ 
+            for(int i=0; i < size; i+=BLOCK_SIZE){ 
                 char* filewriter = filebuffer + i;
                 bd->write(DATA_ADRESS + addressCounter, filewriter);
-                int j =  i += BD_BLOCK_SIZE;
+                int j =  i + BLOCK_SIZE;
                 if (j < size) writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
                 addressCounter++;
             }
@@ -184,9 +184,10 @@ int main(int argc, char *argv[])
 
     // TODO Calculate size of Binary file
 
-    std::cout << "--------------" << std::endl; 
+    std::cout << "Start of Fat--------------" << std::endl; 
     for (int i = 0; i < 50; i++) {
         std::cout << readFat(i) << std::endl;
     }
+    std::cout << "End of Fat--------------" << std::endl; 
     return 0;
 }
