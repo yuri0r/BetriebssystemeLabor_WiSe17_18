@@ -14,7 +14,7 @@
 #include <fstream>
 
 #define BLOCK_SIZE 512
-#define MAX_FILE_SIZE 2 ^ 31
+#define MAX_FILE_SIZE (2 ^ 32) - 1
 #define MAX_FILES 64
 
 #define SUPER_BLOCK_ADRESS 0
