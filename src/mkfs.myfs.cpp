@@ -57,9 +57,11 @@ void initSuperBlock(BlockDevice *bd)
     if (sizeof(sb) > BLOCK_SIZE)
     {
         printf("definition to large");
-        exit;
     }
-    bd->write(SUPER_BLOCK_ADRESS, (char *)sb);
+    else
+    {
+        bd->write(SUPER_BLOCK_ADRESS, (char *)sb);
+    }
 
     /*test it worked...(@yuri)
     SuperBlock *nsb = (SuperBlock *)malloc(BLOCK_SIZE * SUPER_BLOCK_SIZE);
@@ -104,7 +106,7 @@ int main(int argc, char *argv[])
 
     // TODO create Superblock (done)
     initSuperBlock(bd);
-    
+
     //bd->write(0,buffer);
 
     // End of create Superblock
