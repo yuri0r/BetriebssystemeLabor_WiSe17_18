@@ -183,11 +183,5 @@ int main(int argc, char *argv[])
     // End of create DATA
 
     // TODO Calculate size of Binary file
-
-    std::cout << "Start of Fat--------------" << std::endl; 
-    for (int i = 0; i < 50; i++) {
-        std::cout << readFat(i) << std::endl;
-    }
-    std::cout << "End of Fat--------------" << std::endl; 
     return 0;
 }
