@@ -44,6 +44,11 @@ struct SuperBlock
     int dataAdress;
 } superBlock;
 
+struct FatBlock 
+{
+    int destination [16] = { };
+} fatBlock;
+
 BlockDevice* bd = new BlockDevice(BLOCK_SIZE);
 
 void initSuperBlock()
@@ -85,9 +90,29 @@ void initSuperBlock()
     */
 }
 
-void writeFat(int start, int dest)
+void writeFat(int start, int destination)
 {
+    int fatBlockCount = (start - DATA_ADRESS) / 16;
+    int destinationCount = (start - DATA_ADRESS) % 16;
 
+    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
+
+    bd->read(FAT_ADRESS + fatBlockCount, (char *) fb);
+
+    fb->destination[destinationCount] = destination;
+
+    bd->write(FAT_ADRESS + fatBlockCount, (char *) fb);
+}
+
+int readFat(int position) {
+    int fatBlockCount = position / 16;
+    int destinationCount = position % 16;
+
+    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
+
+    bd->read(FAT_ADRESS + fatBlockCount, (char *) fb);
+
+    return fb->destination[destinationCount];
 }
 
 void dataCreation(int argc, char* argv[])
@@ -102,9 +127,11 @@ void dataCreation(int argc, char* argv[])
             file.seekg(0, std::ios::beg);
             file.read(filebuffer, size);
             file.close();
-            for(int i=0; i<size; i+=512){ 
+            for(int i=0; i < size; i+=BLOCK_SIZE){ 
                 char* filewriter = filebuffer + i;
-                bd->write((DATA_ADRESS + addressCounter), filewriter);
+                bd->write(DATA_ADRESS + addressCounter, filewriter);
+                int j =  i + BLOCK_SIZE;
+                if (j < size) writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
                 addressCounter++;
             }
             std::cout<<size<<std::endl;
@@ -156,6 +183,5 @@ int main(int argc, char *argv[])
     // End of create DATA
 
     // TODO Calculate size of Binary file
-
     return 0;
 }
