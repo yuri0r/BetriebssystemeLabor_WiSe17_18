@@ -28,15 +28,13 @@
 #define ROOT_SIZE 1
 
 #define INODES_ADRESS 2
-#define INODES_SIZE MAX_FILES
 
 #define FAT_ADRESS 65
 #define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
 
 #define DATA_ADRESS (FAT_ADRESS + FAT_SIZE)
-#define DATA_SIZE //? in dont rly want to build a 128gb container file.... (@yuri)
 
-struct stat *file_stat;
+struct stat *fs;
 
 struct SuperBlock
 {
@@ -48,19 +46,18 @@ struct SuperBlock
     int dataAdress;
 };
 
-struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel
+struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
     char fileName[256] = {};    // act of pure rebelion! (also 255 is just ugly) @yuri
-    char fileExtension[3] = {}; // file "type" (eg .txt)
-    uint32_t fileSize;          // size of file
-    uint32_t usedBlocksCount;   // how many 512B Blocks 
-    uint8_t mode;               // rwx
-    uint32_t atime;             // last access
-    uint32_t mtime;             // last modification
-    uint32_t ctime;             // last modification of status
+    long fileSize;              // size of file in bytes
+    long usedBlocksCount;       // how many 512B Blocks
+    unsigned int mode;          // rwx
+    long atime;                 // last access
+    long mtime;                 // last modification
+    long ctime;                 // last modification of status
     int firstFatEntry;          // pointer to fat
-    char userID[32];       // id Of user
-    char groupID[32];      // id of group
+    unsigned int userID;        // id Of user
+    unsigned int groupID;       // id of group
 };
 
 struct FatBlock
@@ -72,7 +69,6 @@ BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
 
 void initSuperBlock()
 {
-
     SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE * SUPER_BLOCK_SIZE);
 
     sb->name = SUPER_BLOCK_NAME;
@@ -94,21 +90,19 @@ void initSuperBlock()
 
 void createInode(int inodeIndex,
                  char **fileName,
-                 char **fileExtension,
-                 uint32_t *fileSize,
-                 uint32_t *usedBlocksCount,
-                 uint8_t *mode,
-                 uint32_t *atime,
-                 uint32_t *mtime,
-                 uint32_t *ctime,
+                 long *fileSize,
+                 long *usedBlocksCount,
+                 unsigned int *mode,
+                 long *atime,
+                 long *mtime,
+                 long *ctime,
                  int *firstFatEntry,
-                 char **userID,
-                 char **groupID)
+                 unsigned int *userID,
+                 unsigned int *groupID)
 {
     Inode *inode = (Inode *)malloc(BLOCK_SIZE);
 
-    strcpy( inode->fileName, *fileName);
-    strcpy( inode->fileExtension, *fileExtension);
+    strcpy(inode->fileName, *fileName);
     inode->fileSize = *fileSize;
     inode->usedBlocksCount = *usedBlocksCount;
     inode->mode = *mode;
@@ -116,16 +110,16 @@ void createInode(int inodeIndex,
     inode->mtime = *mtime;
     inode->ctime = *ctime;
     inode->firstFatEntry = *firstFatEntry;
-    strcpy( inode->userID, *userID);
-    strcpy( inode->groupID, *groupID);
+    inode->userID = *userID;
+    inode->groupID = *groupID;
 
-    if (inodeIndex)
+    if (inodeIndex >= INODES_ADRESS)
     {
         bd->write(inodeIndex + INODES_ADRESS, (char *)inode);
     }
     else
     {
-        std::cout << "ERROR not in Inode Space" ;
+        std::cout << "ERROR not in Inode Space";
     }
 }
 
@@ -158,20 +152,21 @@ int readFat(int position)
 void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
+    int firstEntry;
+
     for (int i = 2; i < argc; i++)
     {
-        std::streampos size;
+        stat(argv[i], fs);
+        int size = fs->st_size;
         std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
         if (file.is_open())
-
-        stat(argv[i], file_stat);
-        
         {
             size = file.tellg();
             char *filebuffer = (char *)malloc(size); //save file localy
             file.seekg(0, std::ios::beg);
             file.read(filebuffer, size);
             file.close();
+            firstEntry = addressCounter;
             for (int i = 0; i < size; i += BLOCK_SIZE)
             {
                 char *filewriter = filebuffer + i;
@@ -181,6 +176,17 @@ void dataCreation(int argc, char *argv[])
                     writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
                 addressCounter++;
             }
+            createInode(i-2 ,
+                        &argv[i],
+                        &fs->st_size,
+                        &fs->st_blocks,
+                        &fs->st_mode,
+                        &fs->st_atim.tv_sec,
+                        &fs->st_mtim.tv_sec, 
+                        &fs->st_ctim.tv_sec,
+                        &firstEntry,
+                        &fs->st_uid,
+                        &fs->st_gid);
 
             std::cout << size << std::endl;
             free(filebuffer);
