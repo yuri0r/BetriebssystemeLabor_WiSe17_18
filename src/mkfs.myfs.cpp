@@ -101,7 +101,7 @@ void dataCreation(BlockDevice *bd, int argc, char* argv[])
                 addressCounter++;
             }
             std::cout<<size<<std::endl;
-            delete filebuffer;
+            free(filebuffer);
         }
     }
 }
