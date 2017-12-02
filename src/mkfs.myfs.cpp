@@ -90,7 +90,7 @@ void initSuperBlock()
     */
 }
 
-void writeFat(int start, int dest)
+void writeFat(int start, int destination)
 {
     int fatBlockCount = (start - DATA_ADRESS) / 16;
     int destinationCount = (start - DATA_ADRESS) % 16;
@@ -99,9 +99,20 @@ void writeFat(int start, int dest)
 
     bd->read(FAT_ADRESS + fatBlockCount, (char *) fb);
 
-    fb->destination[destinationCount] = dest;
+    fb->destination[destinationCount] = destination;
 
     bd->write(FAT_ADRESS + fatBlockCount, (char *) fb);
+}
+
+int readFat(int position) {
+    int fatBlockCount = position / 16;
+    int destinationCount = position % 16;
+
+    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
+
+    bd->read(FAT_ADRESS + fatBlockCount, (char *) fb);
+
+    return fb->destination[destinationCount];
 }
 
 void dataCreation(int argc, char* argv[])
@@ -172,5 +183,8 @@ int main(int argc, char *argv[])
 
     // TODO Calculate size of Binary file
 
+    for (int i = 0; i < 500; i++) {
+        std::cout << readFat(i) << std::endl;
+    }
     return 0;
 }
