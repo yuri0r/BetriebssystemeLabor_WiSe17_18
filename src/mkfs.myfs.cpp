@@ -11,6 +11,7 @@
 #include "macros.h"
 #include <iostream>
 #include <string.h>
+#include <fstream>
 
 #define BLOCK_SIZE 512
 #define MAX_FILE_SIZE 2^31
@@ -26,9 +27,9 @@
 #define INODES_SIZE MAX_FILES
 
 #define FAT_ADRESS  65
-#define FAT_SIZE MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES
+#define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
 
-#define DATA_ADRESS FAT_ADRESS + FAT_SIZE
+#define DATA_ADRESS (FAT_ADRESS + FAT_SIZE)
 #define DATA_SIZE //? in dont rly want to build a 128gb container file.... (@yuri)
 
 int main(int argc, char *argv[]) {
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
 
     for(int i=0;i<argc;i++){
         std::cout << "Argument " << i << ": "  <<  argv[i] << std::endl;
-        bd->write(DATA_ADRESS + i, argv[i]);         //argv[] can not exceed one block in size
+        //bd->write(DATA_ADRESS + i, argv[i]);         //now done in DATA (@tristan)
     }
 
     // TODO create Superblock
@@ -77,7 +78,25 @@ int main(int argc, char *argv[]) {
     // End of create INODES
 
     // TODO create DATA
-
+        int addressCounter = 0;
+    for(int i=2;i<argc;i++){
+        std::streampos size;                                   
+        std::ifstream file (argv[i], std::ios::in|std::ios::binary|std::ios::ate); //openfile
+        if(file.is_open()){
+            size = file.tellg();
+            char* filebuffer = (char*)malloc(size);                             //save file localy
+            file.seekg(0, std::ios::beg);
+            file.read(filebuffer, size);
+            file.close();
+            for(int i=0; i<size; i+=512){ 
+                char* filewriter = filebuffer + i;
+                bd->write((DATA_ADRESS + addressCounter), filewriter);
+                addressCounter++;
+            }
+            std::cout<<size<<std::endl;
+            delete filebuffer;
+        }
+    }
     // End of create DATA
 
     // TODO Calculate size of Binary file
