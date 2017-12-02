@@ -44,6 +44,20 @@ struct SuperBlock
     int dataAdress;
 };
 
+struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 32 + 32 = 344
+{
+  	char fileName [256] = { };		// act of pure rebelion! (also 255 is just ugly)
+  	char fileExtension [3] = { }; 	// file "type" (eg .txt)
+    uint32_t fileSize;				// size of file
+    uint8_t mode; 					// rwx
+    uint32_t atime;     			// last access
+    uint32_t mtime;     			// last modification
+    uint32_t ctime;     			// last modification of status
+    int firstFatEntry;     			// pointer to fat
+  	char userID [32] = { };			// id Of user
+  	char groupID [32] = { };		// id of group
+};
+
 struct FatBlock 
 {
     int destination [16] = { };
