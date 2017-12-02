@@ -83,6 +83,29 @@ void initSuperBlock(BlockDevice *bd)
     */
 }
 
+void dataCreation(BlockDevice *bd, int argc, char* argv[])
+{
+    int addressCounter = 0;
+    for(int i=2;i<argc;i++){
+        std::streampos size;                                   
+        std::ifstream file (argv[i], std::ios::in|std::ios::binary|std::ios::ate); //openfile
+        if(file.is_open()){
+            size = file.tellg();
+            char* filebuffer = (char*)malloc(size);                             //save file localy
+            file.seekg(0, std::ios::beg);
+            file.read(filebuffer, size);
+            file.close();
+            for(int i=0; i<size; i+=512){ 
+                char* filewriter = filebuffer + i;
+                bd->write((DATA_ADRESS + addressCounter), filewriter);
+                addressCounter++;
+            }
+            std::cout<<size<<std::endl;
+            delete filebuffer;
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -122,25 +145,8 @@ int main(int argc, char *argv[])
     // End of create INODES
 
     // TODO create DATA
-    int addressCounter = 0;
-    for(int i=2;i<argc;i++){
-        std::streampos size;                                   
-        std::ifstream file (argv[i], std::ios::in|std::ios::binary|std::ios::ate); //openfile
-        if(file.is_open()){
-            size = file.tellg();
-            char* filebuffer = (char*)malloc(size);                             //save file localy
-            file.seekg(0, std::ios::beg);
-            file.read(filebuffer, size);
-            file.close();
-            for(int i=0; i<size; i+=512){ 
-                char* filewriter = filebuffer + i;
-                bd->write((DATA_ADRESS + addressCounter), filewriter);
-                addressCounter++;
-            }
-            std::cout<<size<<std::endl;
-            delete filebuffer;
-        }
-    }
+    dataCreation(bd,argc,argv);
+    
     // End of create DATA
 
     // TODO Calculate size of Binary file
