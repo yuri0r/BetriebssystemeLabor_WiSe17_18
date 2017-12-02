@@ -40,7 +40,7 @@ struct SuperBlock
     int inodesAdress;
     int fatAdress;
     int dataAdress;
-} superBlock;
+};
 
 void initSuperBlock(BlockDevice *bd)
 {
@@ -59,24 +59,10 @@ void initSuperBlock(BlockDevice *bd)
         printf("definition to large");
         exit;
     }
-    bd->write(SUPER_BLOCK_ADRESS, (char *)sb);
-
-    /*test it worked...(@yuri)
-    SuperBlock *nsb = (SuperBlock *)malloc(BLOCK_SIZE * SUPER_BLOCK_SIZE);
-
-    bd->read(SUPER_BLOCK_ADRESS, (char *)nsb);
-
-    std::cout << "nsb \t orig sb \n" <<
-           nsb->name << '\t' << sb->name << '\n' <<
-           nsb->blockSize << '\t' << sb->blockSize << '\n' <<
-           nsb->rootAdress << '\t' << sb->rootAdress << '\n' <<
-           nsb->inodesAdress << '\t' << sb->inodesAdress << '\n' <<
-           nsb->fatAdress << '\t' << sb->fatAdress << '\n' <<
-           nsb->dataAdress << '\t' << sb->dataAdress << '\n';
-
-    free(nsb);
-    free(sb);
-    */
+    else
+    {
+        bd->write(SUPER_BLOCK_ADRESS, (char *)sb);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -104,7 +90,7 @@ int main(int argc, char *argv[])
 
     // TODO create Superblock (done)
     initSuperBlock(bd);
-    
+
     //bd->write(0,buffer);
 
     // End of create Superblock
