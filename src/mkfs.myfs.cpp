@@ -44,7 +44,9 @@ struct SuperBlock
     int dataAdress;
 } superBlock;
 
-void initSuperBlock(BlockDevice *bd)
+BlockDevice* bd = new BlockDevice(BLOCK_SIZE);
+
+void initSuperBlock()
 {
 
     SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE * SUPER_BLOCK_SIZE);
@@ -83,7 +85,12 @@ void initSuperBlock(BlockDevice *bd)
     */
 }
 
-void dataCreation(BlockDevice *bd, int argc, char* argv[])
+void writeFat(int start, int dest)
+{
+
+}
+
+void dataCreation(int argc, char* argv[])
 {
     int addressCounter = 0;
     for(int i=2;i<argc;i++){
@@ -120,7 +127,6 @@ int main(int argc, char *argv[])
     std::cout << "Argument count: " << argc << std::endl;
 
     containerPath = argv[1];
-    BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
     bd->create(containerPath);
 
     for(int i=0;i<argc;i++){
@@ -130,7 +136,7 @@ int main(int argc, char *argv[])
     }
 
     // TODO create Superblock (done)
-    initSuperBlock(bd);
+    initSuperBlock();
 
     //bd->write(0,buffer);
 
@@ -145,7 +151,7 @@ int main(int argc, char *argv[])
     // End of create INODES
 
     // TODO create DATA
-    dataCreation(bd,argc,argv);
+    dataCreation(argc,argv);
     
     // End of create DATA
 
