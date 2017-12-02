@@ -54,7 +54,7 @@ void initSuperBlock(BlockDevice *bd)
     sb->fatAdress = FAT_ADRESS;
     sb->dataAdress = DATA_ADRESS;
 
-    if (sizeof(sb) > 512)
+    if (sizeof(sb) > BLOCK_SIZE)
     {
         printf("definition to large");
         exit;
