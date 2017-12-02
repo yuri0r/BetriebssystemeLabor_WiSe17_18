@@ -12,6 +12,9 @@
 #include <iostream>
 #include <string.h>
 #include <fstream>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define BLOCK_SIZE 512
 #define MAX_FILE_SIZE (2 ^ 32) - 1
@@ -33,6 +36,8 @@
 #define DATA_ADRESS (FAT_ADRESS + FAT_SIZE)
 #define DATA_SIZE //? in dont rly want to build a 128gb container file.... (@yuri)
 
+struct stat *file_stat;
+
 struct SuperBlock
 {
     int name;
@@ -43,11 +48,12 @@ struct SuperBlock
     int dataAdress;
 };
 
-struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel
+struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel
 {
     char fileName[256] = {};    // act of pure rebelion! (also 255 is just ugly) @yuri
     char fileExtension[3] = {}; // file "type" (eg .txt)
     uint32_t fileSize;          // size of file
+    uint32_t usedBlocksCount;   // how many 512B Blocks 
     uint8_t mode;               // rwx
     uint32_t atime;             // last access
     uint32_t mtime;             // last modification
@@ -90,6 +96,7 @@ void createInode(int inodeIndex,
                  char **fileName,
                  char **fileExtension,
                  uint32_t *fileSize,
+                 uint32_t *usedBlocksCount,
                  uint8_t *mode,
                  uint32_t *atime,
                  uint32_t *mtime,
@@ -103,6 +110,7 @@ void createInode(int inodeIndex,
     strcpy( inode->fileName, *fileName);
     strcpy( inode->fileExtension, *fileExtension);
     inode->fileSize = *fileSize;
+    inode->usedBlocksCount = *usedBlocksCount;
     inode->mode = *mode;
     inode->atime = *atime;
     inode->mtime = *mtime;
@@ -155,6 +163,9 @@ void dataCreation(int argc, char *argv[])
         std::streampos size;
         std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
         if (file.is_open())
+
+        stat(argv[i], file_stat);
+        
         {
             size = file.tellg();
             char *filebuffer = (char *)malloc(size); //save file localy
@@ -170,6 +181,7 @@ void dataCreation(int argc, char *argv[])
                     writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
                 addressCounter++;
             }
+
             std::cout << size << std::endl;
             free(filebuffer);
         }
