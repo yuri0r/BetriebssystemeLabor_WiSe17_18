@@ -197,50 +197,98 @@ void dataCreation(int argc, char *argv[])
 
 int testSuperblock()
 {
-    std::cout << "------ Start of superblock test ------" << std::endl;
+    std::cout << "- Start of superblock test" << std::endl;
 
-    std::cout << "------ End of superblock test ------" << std::endl;
-    return 0;
+    SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
+    bd->read(SUPER_BLOCK_ADRESS, (char *)sb);
+
+    int errorCount = 0;
+    
+    if (sb->name != FILE_SYSTEM_NAME) {
+         std::cout << "-- ERROR: sb->name isn't correct" << std::endl;
+         errorCount += 1;
+    } else {
+         std::cout << "-- sb->name = " << std::to_string(sb->name) << std::endl;
+    }
+
+    if (sb->blockSize != BLOCK_SIZE) {
+        std::cout << "-- ERROR: sb->blockSize isn't correct" << std::endl;
+        errorCount += 1;
+    }
+   
+    if (sb->rootAdress != ROOT_ADRESS) {
+        std::cout << "-- ERROR: sb->rootAdress isn't correct" << std::endl;
+        errorCount += 1;
+    }
+
+    if (sb->inodesAdress != INODES_ADDRESS_OFFSET) {
+        std::cout << "-- ERROR: sb->inodesAdress isn't correct" << std::endl;
+        errorCount += 1;
+    }
+
+    if (sb->fatAdress != FAT_ADDRESS_OFFSET) {
+        std::cout << "-- ERROR: sb->fatAdress isn't correct" << std::endl;
+        errorCount += 1;
+    }
+
+    if (sb->dataAdress != DATA_ADDRESS_OFFSET) {
+        std::cout << "-- ERROR: sb->dataAdress isn't correct" << std::endl;
+        errorCount += 1;
+    }
+
+    free(sb);
+
+    if (!errorCount) {
+        std::cout << "-- Test successful" << std::endl;
+    } else {
+        std::cout << "-- Test unsuccessful. Error count: " << errorCount << std::endl;
+    }
+   
+    std::cout << "- End of superblock test" << std::endl;
+    return errorCount;
 }
 
 int testInodes()
 {
-    std::cout << "------ Start of inodes test ------" << std::endl;
+    std::cout << "- Start of inodes test" << std::endl;
 
-    std::cout << "------ End of inodes test ------" << std::endl;
+    std::cout << "- End of inodes test" << std::endl;
     return 0;
 }
 
 int testFat()
 {
-    std::cout << "------ Start of fat test ------" << std::endl;
+    std::cout << "- Start of fat test" << std::endl;
 
-    std::cout << "------ End of fat test ------" << std::endl;
+    std::cout << "- End of fat test" << std::endl;
     return 0;
 }
 
 int testData()
 {
-    std::cout << "------ Start of data test ------" << std::endl;
+    std::cout << "- Start of data test" << std::endl;
 
-    std::cout << "------ End of data test ------" << std::endl;
+    std::cout << "- End of data test" << std::endl;
     return 0;
 }
 
 int testAll()
 {
-    std::cout << "------ Start of tests ------" << std::endl;
+    std::cout << "******************************************************" << std::endl;
+    std::cout << "Start of tests" << std::endl;
 
-    if (testSuperblock() + testInodes() + testFat() + testData()) {
-        std::cout << "Result: All tests were successful." << std::endl;
-        std::cout << "------ End of tests ------" << std::endl;
+    int errorCount = testSuperblock() + testInodes() + testFat() + testData();
+
+    if (!errorCount) {
+        std::cout << "- Result: All tests were successful." << std::endl;
     } else {
-        std::cout << "Result: Something went wrong." << std::endl;
-        std::cout << "------ End of tests ------" << std::endl;
-        return 1;
+        std::cout << "- Result: Something went wrong. Error count: "  << errorCount << std::endl;
     }
 
-    return 0;
+    std::cout << "End of tests" << std::endl;
+    std::cout << "******************************************************" << std::endl;
+
+    return errorCount;
 }
 
 int main(int argc, char *argv[])
