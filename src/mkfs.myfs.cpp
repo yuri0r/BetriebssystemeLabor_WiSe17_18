@@ -173,9 +173,9 @@ void dataCreation(int argc, char *argv[])
                 char *filewriter = filebuffer + i;
                 bd->write(DATA_ADRESS + addressCounter, filewriter);
                 int j = i + BLOCK_SIZE;
+                addressCounter++;
                 if (j < size){
                     writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
-                    addressCounter++;
                     blocksUsed ++;
                 }
                 
