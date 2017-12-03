@@ -59,4 +59,4 @@ fabric.properties
 obj/
 mkfs.myfs
 mount.myfs
-container.bin
+*.bin
