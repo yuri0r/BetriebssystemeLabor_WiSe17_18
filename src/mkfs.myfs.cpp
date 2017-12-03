@@ -45,6 +45,13 @@ struct SuperBlock
     int dataAdress;
 };
 
+struct RootBlock 
+{
+    // false for invalid node
+    // true  valid node
+    bool inodesAddress[MAX_FILES]={0};
+};
+
 struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
     char fileName[256];    // act of pure rebelion! (also 255 is just ugly) @yuri
@@ -85,6 +92,19 @@ void initSuperBlock()
     {
         bd->write(SUPER_BLOCK_ADRESS, (char *)sb);
     }
+}
+
+void setInodeInRoot(int inodeIndex, bool active)
+{
+  RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
+    
+  bd->read(ROOT_ADRESS, (char *)rb);
+  
+  rb->inodesAddress[inodeIndex] = active;
+  
+  bd->write(ROOT_ADRESS, (char *)rb);
+
+  free(rb);
 }
 
 void createInode(int inodeIndex,
@@ -182,10 +202,10 @@ void dataCreation(int argc, char *argv[])
                 }
                 
             }
-
+            //set inode and root entries
             struct stat fs;
             stat(argv[i], &fs);
-
+            setInodeInRoot( i - 2 , true);
             createInode(i-2 ,
                         argv[i],
                         fs.st_size,
