@@ -151,7 +151,7 @@ void dataCreation(int argc, char *argv[])
     int addressCounter = 0;
     int firstEntry;
     int filecount = 0;
-
+    
     for (int i = 2; i < argc; i++)
     {
         std::streampos size;
@@ -181,7 +181,7 @@ void dataCreation(int argc, char *argv[])
             createInode(i-2 ,
                         argv[i],
                         fs.st_size,
-                        fs.st_blocks,
+                        size / BLOCK_SIZE,
                         fs.st_mode,
                         fs.st_atim.tv_sec,
                         fs.st_mtim.tv_sec, 
