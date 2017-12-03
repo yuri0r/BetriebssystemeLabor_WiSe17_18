@@ -215,6 +215,21 @@ char *formatFileName(char *input)
     }
 }
 
+bool checkDuplicate (char* fileName){
+    for(int i = 0; i < MAX_FILES; i++){
+        char *inodeContent = (char*)malloc(BLOCK_SIZE);
+        bd->read((INODES_ADDRESS+i) , (char*) inodeContent);
+        char *cutOutName = (char*)malloc(BLOCK_SIZE);
+        for(int i = 0; i < 256; i++){
+            cutOutName[i] = inodeContent[i];
+        }
+        if(std::strcmp(cutOutName,fileName)==0){
+            return true;
+        }
+    }
+    return false;
+}
+
 void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
@@ -223,37 +238,40 @@ void dataCreation(int argc, char *argv[])
 
     for (int i = 2; i < argc; i++)
     {
-        std::streampos size;
-        std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
-        if (file.is_open())
-        {
-            size = file.tellg();
-            char *filebuffer = (char *)malloc(size); //save file localy
-            file.seekg(0, std::ios::beg);
-            file.read(filebuffer, size);
-            file.close();
-            firstEntry = addressCounter;
-            blocksUsed = 1;
-            for (int i = 0; i < size; i += BLOCK_SIZE)
+        char *fileName = argv[i];
+        fileName = formatFileName(fileName);
+        char* null = (char*)malloc(BLOCK_SIZE); 
+        bd->write(FIRST_DATA_ADDRESS, null);
+        if(checkDuplicate(fileName)==false){
+            std::streampos size;
+            std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
+            if (file.is_open())
             {
-                char *filewriter = filebuffer + i;
-                bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
-                int j = i + BLOCK_SIZE;
-                addressCounter++;
-                if (j < size)
+                size = file.tellg();
+                char *filebuffer = (char *)malloc(size); //save file localy
+                file.seekg(0, std::ios::beg);
+                file.read(filebuffer, size);
+                file.close();
+                firstEntry = addressCounter;
+                blocksUsed = 1;
+                for (int i = 0; i < size; i += BLOCK_SIZE)
                 {
-                    writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
-                    blocksUsed++;
+                    char *filewriter = filebuffer + i;
+                    bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
+                    int j = i + BLOCK_SIZE;
+                    addressCounter++;
+                    if (j < size)
+                    {
+                        writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                        blocksUsed++;
+                    }
                 }
-            }
-            //set inode and root entries
-            struct stat fs;
-            char *fileName = argv[i];
-            stat(fileName, &fs);
+                //set inode and root entries
+                struct stat fs;
+                stat(fileName, &fs);
 
-            fileName = formatFileName(fileName);
-            setInodeInRoot(i - 2, true);
-            createInode(i - 2,
+                setInodeInRoot(i - 2, true);
+                createInode(i - 2,
                         fileName,
                         fs.st_size,
                         blocksUsed,
@@ -264,8 +282,12 @@ void dataCreation(int argc, char *argv[])
                         fs.st_uid,
                         fs.st_gid);
 
-            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte" << std::endl;
-            free(filebuffer);
+                std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte" << std::endl;
+                free(filebuffer);
+            }
+        }
+        else {
+            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\" is a Duplicate, was not writen" << std::endl;
         }
     }
 }
