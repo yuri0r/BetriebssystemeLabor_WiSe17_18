@@ -94,7 +94,7 @@ void initSuperBlock()
     }
 }
 
-void setInode(int inodeIndex, bool active)
+void setInodeInRoot(int inodeIndex, bool active)
 {
   RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
     
@@ -202,10 +202,10 @@ void dataCreation(int argc, char *argv[])
                 }
                 
             }
-
+            //set inode and root entries
             struct stat fs;
             stat(argv[i], &fs);
-
+            setInodeInRoot( i - 2 , true);
             createInode(i-2 ,
                         argv[i],
                         fs.st_size,
