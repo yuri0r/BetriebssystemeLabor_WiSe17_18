@@ -259,7 +259,11 @@ int testInodes()
 int testFat()
 {
     std::cout << "- Start of fat test" << std::endl;
-
+    std::cout << "-- ";
+    for (int i = 0; i < FAT_SIZE*16; i++) {
+         std::cout << readFat(i);
+    }
+    std::cout << std::endl;
     std::cout << "- End of fat test" << std::endl;
     return 0;
 }
