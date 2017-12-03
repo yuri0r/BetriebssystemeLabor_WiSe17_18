@@ -112,6 +112,8 @@ void createInode(int inodeIndex,
 
     if (inodeIndex >= 0 && inodeIndex < (FAT_ADRESS - INODES_ADRESS))
     {
+        std::cout   << "creating inode for: " << inode->fileName << std::endl
+                    << "used blocks: " << inode->usedBlocksCount << std::endl;
         bd->write(inodeIndex + INODES_ADRESS, (char *)inode);
     }
     else
@@ -150,6 +152,7 @@ void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
     int firstEntry;
+    int blocksUsed;
     int filecount = 0;
     
     for (int i = 2; i < argc; i++)
@@ -164,6 +167,7 @@ void dataCreation(int argc, char *argv[])
             file.read(filebuffer, size);
             file.close();
             firstEntry = addressCounter;
+            blocksUsed = 1;
             for (int i = 0; i < size; i += BLOCK_SIZE)
             {
                 char *filewriter = filebuffer + i;
@@ -172,7 +176,9 @@ void dataCreation(int argc, char *argv[])
                 if (j < size){
                     writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
                     addressCounter++;
+                    blocksUsed ++;
                 }
+                
             }
 
             struct stat fs;
@@ -181,7 +187,7 @@ void dataCreation(int argc, char *argv[])
             createInode(i-2 ,
                         argv[i],
                         fs.st_size,
-                        size / BLOCK_SIZE,
+                        blocksUsed,
                         fs.st_mode,
                         fs.st_atime,
                         fs.st_mtime, 
