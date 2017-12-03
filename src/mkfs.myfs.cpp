@@ -195,6 +195,54 @@ void dataCreation(int argc, char *argv[])
     }
 }
 
+int testSuperblock()
+{
+    std::cout << "------ Start of superblock test ------" << std::endl;
+
+    std::cout << "------ End of superblock test ------" << std::endl;
+    return 0;
+}
+
+int testInodes()
+{
+    std::cout << "------ Start of inodes test ------" << std::endl;
+
+    std::cout << "------ End of inodes test ------" << std::endl;
+    return 0;
+}
+
+int testFat()
+{
+    std::cout << "------ Start of fat test ------" << std::endl;
+
+    std::cout << "------ End of fat test ------" << std::endl;
+    return 0;
+}
+
+int testData()
+{
+    std::cout << "------ Start of data test ------" << std::endl;
+
+    std::cout << "------ End of data test ------" << std::endl;
+    return 0;
+}
+
+int testAll()
+{
+    std::cout << "------ Start of tests ------" << std::endl;
+
+    if (testSuperblock() + testInodes() + testFat() + testData()) {
+        std::cout << "Result: All tests were successful." << std::endl;
+        std::cout << "------ End of tests ------" << std::endl;
+    } else {
+        std::cout << "Result: Something went wrong." << std::endl;
+        std::cout << "------ End of tests ------" << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2)
@@ -210,6 +258,8 @@ int main(int argc, char *argv[])
     initSuperBlock();
 
     dataCreation(argc, argv);
+
+    testAll();
 
     return 0;
 }
