@@ -57,7 +57,7 @@ struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344
     char fileName[256];   // act of pure rebelion! (also 255 is just ugly) @yuri
     long fileSize;        // size of file in bytes
     long usedBlocksCount; // how many 512B Blocks
-    unsigned int mode;    // rwx
+    unsigned int mode =0444;    // rwx
     long atime;           // last access
     long mtime;           // last modification
     long ctime;           // last modification of status
@@ -69,7 +69,7 @@ struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344
 struct FatBlock
 {
     int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
-} fatBlock;
+};
 
 // ***************end structs**************************************
 
@@ -172,23 +172,6 @@ int readFat(int position)
     bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 
     return fb->destination[destinationCount];
-}
-
-char *jmpToEnd(char *input)
-{
-    printf("starting prozedure \nmoving to the end of: \"%s\" ", input);
-
-    return input;
-}
-
-char *extract(char *input)
-{
-    char *orig = jmpToEnd(input);
-
-    printf("searching for \"::\" in the string...\n");
-
-    printf("there was nothing to find \nend of prozedure\n\n");
-    return input;
 }
 
 char *formatFileName(char *input)
