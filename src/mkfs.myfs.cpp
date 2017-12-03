@@ -235,7 +235,7 @@ void dataCreation(int argc, char *argv[])
             stat(fileName, &fs);
 
             fileName = formatFileName(fileName);
-            setInodeInRoot(i - 2, true);
+            setInodeInRoot(i - 2, true); //marks inode as valid in root
             createInode(i - 2,
                         fileName,
                         fs.st_size,
