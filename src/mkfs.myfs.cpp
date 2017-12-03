@@ -183,9 +183,9 @@ void dataCreation(int argc, char *argv[])
                         fs.st_size,
                         size / BLOCK_SIZE,
                         fs.st_mode,
-                        fs.st_atim.tv_sec,
-                        fs.st_mtim.tv_sec, 
-                        fs.st_ctim.tv_sec,
+                        fs.st_atime,
+                        fs.st_mtime, 
+                        fs.st_ctime,
                         firstEntry,
                         fs.st_uid,
                         fs.st_gid);
