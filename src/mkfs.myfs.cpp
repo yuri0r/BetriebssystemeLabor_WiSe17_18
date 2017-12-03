@@ -117,7 +117,6 @@ void createInode(int inodeIndex,
                  char *fileName,
                  long fileSize,
                  long usedBlocksCount,
-                 unsigned int mode,
                  long atime,
                  long mtime,
                  long ctime,
@@ -130,7 +129,6 @@ void createInode(int inodeIndex,
     strcpy(inode->fileName, fileName);
     inode->fileSize = fileSize;
     inode->usedBlocksCount = usedBlocksCount;
-    inode->mode = mode;
     inode->atime = atime;
     inode->mtime = mtime;
     inode->ctime = ctime;
@@ -189,100 +187,104 @@ char *extract(char *input)
 
     printf("searching for \"::\" in the string...\n");
 
-    
-
     printf("there was nothing to find \nend of prozedure\n\n");
     return input;
 }
 
 char *formatFileName(char *input)
 {
+    int count = 0;
     while (*input != '\0')
     {
         input++;
+        count++;
     }
 
-    while (*input != '/')
+    while (*input != '/' && count > 0)
     {
         input--;
+        count--;
     }
-    return input + 1;
+    if (*input == '/')
+    {
+        return input + 1;
+    }
+    else
+    {
+        return input;
+    }
 }
 
-    void dataCreation(int argc, char *argv[])
-    {
-        int addressCounter = 0;
-        int firstEntry;
-        int blocksUsed;
+void dataCreation(int argc, char *argv[])
+{
+    int addressCounter = 0;
+    int firstEntry;
+    int blocksUsed;
 
-        for (int i = 2; i < argc; i++)
+    for (int i = 2; i < argc; i++)
+    {
+        std::streampos size;
+        std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
+        if (file.is_open())
         {
-            std::streampos size;
-            std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
-            if (file.is_open())
+            size = file.tellg();
+            char *filebuffer = (char *)malloc(size); //save file localy
+            file.seekg(0, std::ios::beg);
+            file.read(filebuffer, size);
+            file.close();
+            firstEntry = addressCounter;
+            blocksUsed = 1;
+            for (int i = 0; i < size; i += BLOCK_SIZE)
             {
-                size = file.tellg();
-                char *filebuffer = (char *)malloc(size); //save file localy
-                file.seekg(0, std::ios::beg);
-                file.read(filebuffer, size);
-                file.close();
-                firstEntry = addressCounter;
-                blocksUsed = 1;
-                for (int i = 0; i < size; i += BLOCK_SIZE)
+                char *filewriter = filebuffer + i;
+                bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
+                int j = i + BLOCK_SIZE;
+                addressCounter++;
+                if (j < size)
                 {
-                    char *filewriter = filebuffer + i;
-                    bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
-                    int j = i + BLOCK_SIZE;
-                    addressCounter++;
-                    if (j < size)
-                    {
-                        writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
-                        blocksUsed++;
-                    }
+                    writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                    blocksUsed++;
                 }
-                //set inode and root entries
-                struct stat fs;
-                char *fileName = argv[i];
-                stat(argv[i], &fs);
-
-                if (*fileName == '/')
-                {
-                    fileName = formatFileName(fileName);
-                }
-                setInodeInRoot(i - 2, true);
-                createInode(i - 2,
-                            fileName,
-                            fs.st_size,
-                            blocksUsed,
-                            0444,
-                            fs.st_atime,
-                            fs.st_mtime,
-                            fs.st_ctime,
-                            firstEntry,
-                            fs.st_uid,
-                            fs.st_gid);
-
-                std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte" << std::endl;
-                free(filebuffer);
             }
+            //set inode and root entries
+            struct stat fs;
+            char *fileName = argv[i];
+            stat(fileName, &fs);
+
+            fileName = formatFileName(fileName);
+            setInodeInRoot(i - 2, true);
+            createInode(i - 2,
+                        fileName,
+                        fs.st_size,
+                        blocksUsed,
+                        fs.st_atime,
+                        fs.st_mtime,
+                        fs.st_ctime,
+                        firstEntry,
+                        fs.st_uid,
+                        fs.st_gid);
+
+            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte" << std::endl;
+            free(filebuffer);
         }
     }
+}
 
-    int main(int argc, char *argv[])
+int main(int argc, char *argv[])
+{
+    if (argc < 2)
     {
-        if (argc < 2)
-        {
-            std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... file n>";
-            return 1;
-        }
-
-        std::cout << "ContainerFile: " << argv[1] << std::endl;
-
-        bd->create(argv[1]); // argv[1] = containerPath
-
-        initSuperBlock();
-
-        dataCreation(argc, argv);
-
-        return 0;
+        std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... file n>";
+        return 1;
     }
+
+    std::cout << "ContainerFile: " << argv[1] << std::endl;
+
+    bd->create(argv[1]); // argv[1] = containerPath
+
+    initSuperBlock();
+
+    dataCreation(argc, argv);
+
+    return 0;
+}
