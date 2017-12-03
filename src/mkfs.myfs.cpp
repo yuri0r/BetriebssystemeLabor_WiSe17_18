@@ -125,11 +125,13 @@ void writeFat(int start, int destination)
     int fatBlockCount = (start - DATA_ADDRESS_OFFSET) / 16;
     int destinationCount = (start - DATA_ADDRESS_OFFSET) % 16;
 
+    int destinationIndex = (destination - DATA_ADDRESS_OFFSET) / 16 + (destination - DATA_ADDRESS_OFFSET) % 16;
+
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
     bd->read(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
 
-    fb->destination[destinationCount] = destination;
+    fb->destination[destinationCount] = destinationIndex;
 
     bd->write(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
 }
