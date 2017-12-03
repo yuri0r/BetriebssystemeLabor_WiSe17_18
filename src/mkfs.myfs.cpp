@@ -22,13 +22,13 @@
 #define MAX_FILE_SIZE (2 ^ 32) - 1
 #define MAX_FILES 64
 
-#define ROOT_ADRESS 1
+#define ROOT_ADDRESS 1
 #define INODES_ADDRESS 2
 #define FIRST_FAT_ADDRESS MAX_FILES + INODES_ADDRESS
 
 #define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
 #define FIRST_DATA_ADDRESS (FIRST_FAT_ADDRESS + FAT_SIZE)
-#define ADRESSCOUNTPERFATBLOCK BLOCK_SIZE / 4
+#define ADDRESS_COUNT_PER_FAT_BLOCK BLOCK_SIZE / 4
 
 // ***********************start structs******************************
 struct SuperBlock
@@ -47,8 +47,8 @@ struct SuperBlock
 
 struct RootBlock
 {
-    // false for invalid node
-    // true  valid node
+    // false = for inactive node
+    // true  = active node
     bool inodesAddress[MAX_FILES] = {0};
 };
 
@@ -68,7 +68,7 @@ struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344
 
 struct FatBlock
 {
-    int destination[ADRESSCOUNTPERFATBLOCK] = {};
+    int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
 } fatBlock;
 
 // ***************end structs**************************************
@@ -84,8 +84,8 @@ void initSuperBlock()
     sb->maxFileSize = MAX_FILE_SIZE;
     sb->maxFiles = MAX_FILES;
     sb->fatSize = FAT_SIZE;
-    sb->adressCounterPerFatBlock = ADRESSCOUNTPERFATBLOCK;
-    sb->rootAdress = ROOT_ADRESS;
+    sb->adressCounterPerFatBlock = ADDRESS_COUNT_PER_FAT_BLOCK;
+    sb->rootAdress = ROOT_ADDRESS;
     sb->inodesAdress = INODES_ADDRESS;
     sb->firsFatAdress = FIRST_FAT_ADDRESS;
     sb->firstDataAdress = FIRST_DATA_ADDRESS;
@@ -104,11 +104,11 @@ void setInodeInRoot(int inodeIndex, bool active)
 {
     RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
 
-    bd->read(ROOT_ADRESS, (char *)rb);
+    bd->read(ROOT_ADDRESS, (char *)rb);
 
     rb->inodesAddress[inodeIndex] = active;
 
-    bd->write(ROOT_ADRESS, (char *)rb);
+    bd->write(ROOT_ADDRESS, (char *)rb);
 
     free(rb);
 }
@@ -150,10 +150,10 @@ void createInode(int inodeIndex,
 
 void writeFat(int start, int destination)
 {
-    int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADRESSCOUNTPERFATBLOCK;
-    int destinationCount = (start - FIRST_DATA_ADDRESS) % ADRESSCOUNTPERFATBLOCK;
+    int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int destinationCount = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
 
-    int destinationIndex = (destination - FIRST_DATA_ADDRESS) / ADRESSCOUNTPERFATBLOCK + (destination - FIRST_DATA_ADDRESS) % ADRESSCOUNTPERFATBLOCK;
+    int destinationIndex = (destination - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK + (destination - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
@@ -166,8 +166,8 @@ void writeFat(int start, int destination)
 
 int readFat(int position)
 {
-    int fatBlockCount = position / ADRESSCOUNTPERFATBLOCK;
-    int destinationCount = position % ADRESSCOUNTPERFATBLOCK;
+    int fatBlockCount = position / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int destinationCount = position % ADDRESS_COUNT_PER_FAT_BLOCK;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
@@ -181,7 +181,6 @@ void dataCreation(int argc, char *argv[])
     int addressCounter = 0;
     int firstEntry;
     int blocksUsed;
-    int filecount = 0;
 
     for (int i = 2; i < argc; i++)
     {
