@@ -60,3 +60,4 @@ obj/
 mkfs.myfs
 mount.myfs
 *.bin
+*.txt
