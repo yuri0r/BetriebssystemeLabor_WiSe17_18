@@ -21,7 +21,6 @@
 #define MAX_FILES 64
 
 #define SUPER_BLOCK_ADRESS 0
-#define SUPER_BLOCK_SIZE 1
 #define SUPER_BLOCK_NAME 'myFS'
 
 #define ROOT_ADRESS 1
@@ -33,8 +32,6 @@
 #define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
 
 #define DATA_ADRESS (FAT_ADRESS + FAT_SIZE)
-
-struct stat *fs;
 
 struct SuperBlock
 {
@@ -48,7 +45,7 @@ struct SuperBlock
 
 struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
-    char fileName[256] = {};    // act of pure rebelion! (also 255 is just ugly) @yuri
+    char fileName[256];    // act of pure rebelion! (also 255 is just ugly) @yuri
     long fileSize;              // size of file in bytes
     long usedBlocksCount;       // how many 512B Blocks
     unsigned int mode;          // rwx
@@ -69,10 +66,10 @@ BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
 
 void initSuperBlock()
 {
-    SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE * SUPER_BLOCK_SIZE);
+    SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
 
     sb->name = SUPER_BLOCK_NAME;
-    sb->blockSize = SUPER_BLOCK_SIZE;
+    sb->blockSize = BLOCK_SIZE;
     sb->rootAdress = ROOT_ADRESS;
     sb->inodesAdress = INODES_ADRESS;
     sb->fatAdress = FAT_ADRESS;
@@ -89,37 +86,37 @@ void initSuperBlock()
 }
 
 void createInode(int inodeIndex,
-                 char **fileName,
-                 long *fileSize,
-                 long *usedBlocksCount,
-                 unsigned int *mode,
-                 long *atime,
-                 long *mtime,
-                 long *ctime,
-                 int *firstFatEntry,
-                 unsigned int *userID,
-                 unsigned int *groupID)
+                 char *fileName,
+                 long fileSize,
+                 long usedBlocksCount,
+                 unsigned int mode,
+                 long atime,
+                 long mtime,
+                 long ctime,
+                 int firstFatEntry,
+                 unsigned int userID,
+                 unsigned int groupID)
 {
     Inode *inode = (Inode *)malloc(BLOCK_SIZE);
 
-    strcpy(inode->fileName, *fileName);
-    inode->fileSize = *fileSize;
-    inode->usedBlocksCount = *usedBlocksCount;
-    inode->mode = *mode;
-    inode->atime = *atime;
-    inode->mtime = *mtime;
-    inode->ctime = *ctime;
-    inode->firstFatEntry = *firstFatEntry;
-    inode->userID = *userID;
-    inode->groupID = *groupID;
+    strcpy(inode->fileName, fileName);
+    inode->fileSize = fileSize;
+    inode->usedBlocksCount = usedBlocksCount;
+    inode->mode = mode;
+    inode->atime = atime;
+    inode->mtime = mtime;
+    inode->ctime = ctime;
+    inode->firstFatEntry = firstFatEntry;
+    inode->userID = userID;
+    inode->groupID = groupID;
 
-    if (inodeIndex >= INODES_ADRESS)
+    if (inodeIndex >= 0 && inodeIndex < (FAT_ADRESS - INODES_ADRESS))
     {
         bd->write(inodeIndex + INODES_ADRESS, (char *)inode);
     }
     else
     {
-        std::cout << "ERROR not in Inode Space";
+        std::cout << "ERROR not in Inode Space: " << inodeIndex << std::endl;
     }
 }
 
@@ -153,11 +150,11 @@ void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
     int firstEntry;
+    int filecount = 0;
 
     for (int i = 2; i < argc; i++)
     {
-        stat(argv[i], fs);
-        int size = fs->st_size;
+        std::streampos size;
         std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
         if (file.is_open())
         {
@@ -172,21 +169,26 @@ void dataCreation(int argc, char *argv[])
                 char *filewriter = filebuffer + i;
                 bd->write(DATA_ADRESS + addressCounter, filewriter);
                 int j = i + BLOCK_SIZE;
-                if (j < size)
+                if (j < size){
                     writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
-                addressCounter++;
+                    addressCounter++;
+                }
             }
+
+            struct stat fs;
+            stat(argv[i], &fs);
+
             createInode(i-2 ,
-                        &argv[i],
-                        &fs->st_size,
-                        &fs->st_blocks,
-                        &fs->st_mode,
-                        &fs->st_atim.tv_sec,
-                        &fs->st_mtim.tv_sec, 
-                        &fs->st_ctim.tv_sec,
-                        &firstEntry,
-                        &fs->st_uid,
-                        &fs->st_gid);
+                        argv[i],
+                        fs.st_size,
+                        fs.st_blocks,
+                        fs.st_mode,
+                        fs.st_atim.tv_sec,
+                        fs.st_mtim.tv_sec, 
+                        fs.st_ctim.tv_sec,
+                        firstEntry,
+                        fs.st_uid,
+                        fs.st_gid);
 
             std::cout << size << std::endl;
             free(filebuffer);
