@@ -21,17 +21,17 @@
 #define MAX_FILES 64
 
 #define SUPER_BLOCK_ADRESS 0
-#define SUPER_BLOCK_NAME 'myFS'
+#define FILE_SYSTEM_NAME 'myFS'
 
 #define ROOT_ADRESS 1
 #define ROOT_SIZE 1
 
-#define INODES_ADRESS 2
+#define INODES_ADDRESS_OFFSET 2
 
-#define FAT_ADRESS 65
+#define FAT_ADDRESS_OFFSET 65
 #define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
 
-#define DATA_ADRESS (FAT_ADRESS + FAT_SIZE)
+#define DATA_ADDRESS_OFFSET (FAT_ADDRESS_OFFSET + FAT_SIZE)
 
 struct SuperBlock
 {
@@ -68,12 +68,12 @@ void initSuperBlock()
 {
     SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
 
-    sb->name = SUPER_BLOCK_NAME;
+    sb->name = FILE_SYSTEM_NAME;
     sb->blockSize = BLOCK_SIZE;
     sb->rootAdress = ROOT_ADRESS;
-    sb->inodesAdress = INODES_ADRESS;
-    sb->fatAdress = FAT_ADRESS;
-    sb->dataAdress = DATA_ADRESS;
+    sb->inodesAdress = INODES_ADDRESS_OFFSET;
+    sb->fatAdress = FAT_ADDRESS_OFFSET;
+    sb->dataAdress = DATA_ADDRESS_OFFSET;
 
     if (sizeof(sb) > BLOCK_SIZE)
     {
@@ -110,9 +110,9 @@ void createInode(int inodeIndex,
     inode->userID = userID;
     inode->groupID = groupID;
 
-    if (inodeIndex >= 0 && inodeIndex < (FAT_ADRESS - INODES_ADRESS))
+    if (inodeIndex >= 0 && inodeIndex < (FAT_ADDRESS_OFFSET - INODES_ADDRESS_OFFSET))
     {
-        bd->write(inodeIndex + INODES_ADRESS, (char *)inode);
+        bd->write(inodeIndex + INODES_ADDRESS_OFFSET, (char *)inode);
     }
     else
     {
@@ -122,16 +122,16 @@ void createInode(int inodeIndex,
 
 void writeFat(int start, int destination)
 {
-    int fatBlockCount = (start - DATA_ADRESS) / 16;
-    int destinationCount = (start - DATA_ADRESS) % 16;
+    int fatBlockCount = (start - DATA_ADDRESS_OFFSET) / 16;
+    int destinationCount = (start - DATA_ADDRESS_OFFSET) % 16;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
-    bd->read(FAT_ADRESS + fatBlockCount, (char *)fb);
+    bd->read(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
 
     fb->destination[destinationCount] = destination;
 
-    bd->write(FAT_ADRESS + fatBlockCount, (char *)fb);
+    bd->write(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
 }
 
 int readFat(int position)
@@ -141,7 +141,7 @@ int readFat(int position)
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
-    bd->read(FAT_ADRESS + fatBlockCount, (char *)fb);
+    bd->read(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
 
     return fb->destination[destinationCount];
 }
@@ -150,7 +150,6 @@ void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
     int firstEntry;
-    int filecount = 0;
 
     for (int i = 2; i < argc; i++)
     {
@@ -167,10 +166,10 @@ void dataCreation(int argc, char *argv[])
             for (int i = 0; i < size; i += BLOCK_SIZE)
             {
                 char *filewriter = filebuffer + i;
-                bd->write(DATA_ADRESS + addressCounter, filewriter);
+                bd->write(DATA_ADDRESS_OFFSET + addressCounter, filewriter);
                 int j = i + BLOCK_SIZE;
                 if (j < size){
-                    writeFat(DATA_ADRESS + addressCounter, DATA_ADRESS + addressCounter + 1);
+                    writeFat(DATA_ADDRESS_OFFSET + addressCounter, DATA_ADDRESS_OFFSET + addressCounter + 1);
                     addressCounter++;
                 }
             }
@@ -190,7 +189,7 @@ void dataCreation(int argc, char *argv[])
                         fs.st_uid,
                         fs.st_gid);
 
-            std::cout << size << std::endl;
+            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte"<< std::endl;
             free(filebuffer);
         }
     }
@@ -198,46 +197,19 @@ void dataCreation(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-
-    char *containerPath;
-
-    // TODO: Implement file system generation & copying of files here
     if (argc < 2)
     {
         std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... file n>";
         return 1;
     }
-    std::cout << "Argument count: " << argc << std::endl;
 
-    containerPath = argv[1];
-    bd->create(containerPath);
+    std::cout << "ContainerFile: " << argv[1] << std::endl;
 
-    for (int i = 0; i < argc; i++)
-    {
-        std::cout << "Argument " << i << ": " << argv[i] << std::endl;
-        //bd->write(DATA_ADRESS + i, argv[i]);         //now done in DATA (@tristan)
-    }
+    bd->create(argv[1]); // argv[1] = containerPath
 
-    // TODO create Superblock (done)
     initSuperBlock();
 
-    //bd->write(0,buffer);
-
-    // End of create Superblock
-
-    // TODO create FAT
-
-    // End of create FAT
-
-    // TODO create INODES
-
-    // End of create INODES
-
-    // TODO create DATA
     dataCreation(argc, argv);
 
-    // End of create DATA
-
-    // TODO Calculate size of Binary file
     return 0;
 }
