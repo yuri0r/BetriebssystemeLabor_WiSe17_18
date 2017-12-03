@@ -154,15 +154,18 @@ void createInode(int inodeIndex,
 void writeFat(int start, int destination)
 {
     int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
+    int startIndex = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
 
-    int destinationIndex = (destination - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK + (destination - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
+    int destinationBlock = (destination - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int destinationCount = (destination - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
+
+    int destinationIndex = destinationBlock * ADDRESS_COUNT_PER_FAT_BLOCK + destinationCount;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
     bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 
-    fb->destination[destinationCount] = destinationIndex;
+    fb->destination[startIndex] = destinationIndex;
 
     bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 }
