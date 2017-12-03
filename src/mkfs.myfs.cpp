@@ -16,60 +16,62 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define FILE_SYSTEM_NAME 'myFS'
+
 #define BLOCK_SIZE 512
 #define MAX_FILE_SIZE (2 ^ 32) - 1
 #define MAX_FILES 64
 
-#define SUPER_BLOCK_ADRESS 0
-#define FILE_SYSTEM_NAME 'myFS'
-
 #define ROOT_ADRESS 1
-#define ROOT_SIZE 1
+#define INODES_ADDRESS 2
+#define FIRST_FAT_ADDRESS MAX_FILES + INODES_ADDRESS
 
-#define INODES_ADDRESS_OFFSET 2
-
-#define FAT_ADDRESS_OFFSET 65
 #define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
+#define FIRST_DATA_ADDRESS (FIRST_FAT_ADDRESS + FAT_SIZE)
+#define ADRESSCOUNTPERFATBLOCK BLOCK_SIZE / 4
 
-#define DATA_ADDRESS_OFFSET (FAT_ADDRESS_OFFSET + FAT_SIZE)
-
-#define addressCountPerBlock 128
-
+// ***********************start structs******************************
 struct SuperBlock
 {
-    int name;
+    int fileSystemName;
     int blockSize;
+    int maxFileSize;
+    int maxFiles;
+    int fatSize;
+    int adressCounterPerFatBlock;
     int rootAdress;
     int inodesAdress;
-    int fatAdress;
-    int dataAdress;
+    int firsFatAdress;
+    int firstDataAdress;
 };
 
-struct RootBlock 
+struct RootBlock
 {
     // false for invalid node
     // true  valid node
-    bool inodesAddress[MAX_FILES]={0};
+    bool inodesAddress[MAX_FILES] = {0};
 };
 
-struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
+struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
-    char fileName[256];    // act of pure rebelion! (also 255 is just ugly) @yuri
-    long fileSize;              // size of file in bytes
-    long usedBlocksCount;       // how many 512B Blocks
-    unsigned int mode;          // rwx
-    long atime;                 // last access
-    long mtime;                 // last modification
-    long ctime;                 // last modification of status
-    int firstFatEntry;          // pointer to fat
-    unsigned int userID;        // id Of user
-    unsigned int groupID;       // id of group
+    char fileName[256];   // act of pure rebelion! (also 255 is just ugly) @yuri
+    long fileSize;        // size of file in bytes
+    long usedBlocksCount; // how many 512B Blocks
+    unsigned int mode;    // rwx
+    long atime;           // last access
+    long mtime;           // last modification
+    long ctime;           // last modification of status
+    int firstFatEntry;    // pointer to fat
+    unsigned int userID;  // id Of user
+    unsigned int groupID; // id of group
 };
 
 struct FatBlock
 {
-    int destination[addressCountPerBlock] = {};
+    int destination[ADRESSCOUNTPERFATBLOCK] = {};
 } fatBlock;
+
+// ***************end structs**************************************
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
 
@@ -77,12 +79,16 @@ void initSuperBlock()
 {
     SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
 
-    sb->name = FILE_SYSTEM_NAME;
+    sb->fileSystemName = FILE_SYSTEM_NAME;
     sb->blockSize = BLOCK_SIZE;
+    sb->maxFileSize = MAX_FILE_SIZE;
+    sb->maxFiles = MAX_FILES;
+    sb->fatSize = FAT_SIZE;
+    sb->adressCounterPerFatBlock = ADRESSCOUNTPERFATBLOCK;
     sb->rootAdress = ROOT_ADRESS;
-    sb->inodesAdress = INODES_ADDRESS_OFFSET;
-    sb->fatAdress = FAT_ADDRESS_OFFSET;
-    sb->dataAdress = DATA_ADDRESS_OFFSET;
+    sb->inodesAdress = INODES_ADDRESS;
+    sb->firsFatAdress = FIRST_FAT_ADDRESS;
+    sb->firstDataAdress = FIRST_DATA_ADDRESS;
 
     if (sizeof(sb) > BLOCK_SIZE)
     {
@@ -90,21 +96,21 @@ void initSuperBlock()
     }
     else
     {
-        bd->write(SUPER_BLOCK_ADRESS, (char *)sb);
+        bd->write(0, (char *)sb);
     }
 }
 
 void setInodeInRoot(int inodeIndex, bool active)
 {
-  RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
-    
-  bd->read(ROOT_ADRESS, (char *)rb);
-  
-  rb->inodesAddress[inodeIndex] = active;
-  
-  bd->write(ROOT_ADRESS, (char *)rb);
+    RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
 
-  free(rb);
+    bd->read(ROOT_ADRESS, (char *)rb);
+
+    rb->inodesAddress[inodeIndex] = active;
+
+    bd->write(ROOT_ADRESS, (char *)rb);
+
+    free(rb);
 }
 
 void createInode(int inodeIndex,
@@ -119,7 +125,7 @@ void createInode(int inodeIndex,
                  unsigned int userID,
                  unsigned int groupID)
 {
-    Inode *inode = (Inode *)malloc(BLOCK_SIZE);
+    InodeBlock *inode = (InodeBlock *)malloc(BLOCK_SIZE);
 
     strcpy(inode->fileName, fileName);
     inode->fileSize = fileSize;
@@ -132,9 +138,9 @@ void createInode(int inodeIndex,
     inode->userID = userID;
     inode->groupID = groupID;
 
-    if (inodeIndex >= 0 && inodeIndex < (FAT_ADDRESS_OFFSET - INODES_ADDRESS_OFFSET))
+    if (inodeIndex >= 0 && inodeIndex < (FIRST_FAT_ADDRESS - INODES_ADDRESS))
     {
-        bd->write(inodeIndex + INODES_ADDRESS_OFFSET, (char *)inode);
+        bd->write(inodeIndex + INODES_ADDRESS, (char *)inode);
     }
     else
     {
@@ -144,28 +150,28 @@ void createInode(int inodeIndex,
 
 void writeFat(int start, int destination)
 {
-    int fatBlockCount = (start - DATA_ADDRESS_OFFSET) / addressCountPerBlock;
-    int destinationCount = (start - DATA_ADDRESS_OFFSET) % addressCountPerBlock;
+    int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADRESSCOUNTPERFATBLOCK;
+    int destinationCount = (start - FIRST_DATA_ADDRESS) % ADRESSCOUNTPERFATBLOCK;
 
-    int destinationIndex = (destination - DATA_ADDRESS_OFFSET) / addressCountPerBlock + (destination - DATA_ADDRESS_OFFSET) % addressCountPerBlock;
+    int destinationIndex = (destination - FIRST_DATA_ADDRESS) / ADRESSCOUNTPERFATBLOCK + (destination - FIRST_DATA_ADDRESS) % ADRESSCOUNTPERFATBLOCK;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
-    bd->read(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
+    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 
     fb->destination[destinationCount] = destinationIndex;
 
-    bd->write(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
+    bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 }
 
 int readFat(int position)
 {
-    int fatBlockCount = position / addressCountPerBlock;
-    int destinationCount = position % addressCountPerBlock;
+    int fatBlockCount = position / ADRESSCOUNTPERFATBLOCK;
+    int destinationCount = position % ADRESSCOUNTPERFATBLOCK;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
-    bd->read(FAT_ADDRESS_OFFSET + fatBlockCount, (char *)fb);
+    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 
     return fb->destination[destinationCount];
 }
@@ -176,7 +182,7 @@ void dataCreation(int argc, char *argv[])
     int firstEntry;
     int blocksUsed;
     int filecount = 0;
-    
+
     for (int i = 2; i < argc; i++)
     {
         std::streampos size;
@@ -193,32 +199,32 @@ void dataCreation(int argc, char *argv[])
             for (int i = 0; i < size; i += BLOCK_SIZE)
             {
                 char *filewriter = filebuffer + i;
-                bd->write(DATA_ADDRESS_OFFSET + addressCounter, filewriter);
+                bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
                 int j = i + BLOCK_SIZE;
                 addressCounter++;
-                if (j < size){
-                    writeFat(DATA_ADDRESS_OFFSET + addressCounter, DATA_ADDRESS_OFFSET + addressCounter + 1);
-                    blocksUsed ++;
+                if (j < size)
+                {
+                    writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                    blocksUsed++;
                 }
-                
             }
             //set inode and root entries
             struct stat fs;
             stat(argv[i], &fs);
-            setInodeInRoot( i - 2 , true);
-            createInode(i-2 ,
+            setInodeInRoot(i - 2, true);
+            createInode(i - 2,
                         argv[i],
                         fs.st_size,
                         blocksUsed,
                         fs.st_mode,
                         fs.st_atime,
-                        fs.st_mtime, 
+                        fs.st_mtime,
                         fs.st_ctime,
                         firstEntry,
                         fs.st_uid,
                         fs.st_gid);
 
-            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte"<< std::endl;
+            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte" << std::endl;
             free(filebuffer);
         }
     }
