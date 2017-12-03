@@ -54,22 +54,22 @@ struct RootBlock
 
 struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
-    char fileName[256];   // act of pure rebelion! (also 255 is just ugly) @yuri
-    long fileSize;        // size of file in bytes
-    long usedBlocksCount; // how many 512B Blocks
-    unsigned int mode;    // rwx
-    long atime;           // last access
-    long mtime;           // last modification
-    long ctime;           // last modification of status
-    int firstFatEntry;    // pointer to fat
-    unsigned int userID;  // id Of user
-    unsigned int groupID; // id of group
+    char fileName[256];       // act of pure rebelion! (also 255 is just ugly) @yuri
+    long fileSize;            // size of file in bytes
+    long usedBlocksCount;     // how many 512B Blocks
+    unsigned int mode = 0444; // rwx
+    long atime;               // last access
+    long mtime;               // last modification
+    long ctime;               // last modification of status
+    int firstFatEntry;        // pointer to fat
+    unsigned int userID;      // id Of user
+    unsigned int groupID;     // id of group
 };
 
 struct FatBlock
 {
     int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
-} fatBlock;
+};
 
 // ***************end structs**************************************
 
@@ -117,7 +117,6 @@ void createInode(int inodeIndex,
                  char *fileName,
                  long fileSize,
                  long usedBlocksCount,
-                 unsigned int mode,
                  long atime,
                  long mtime,
                  long ctime,
@@ -130,7 +129,6 @@ void createInode(int inodeIndex,
     strcpy(inode->fileName, fileName);
     inode->fileSize = fileSize;
     inode->usedBlocksCount = usedBlocksCount;
-    inode->mode = mode;
     inode->atime = atime;
     inode->mtime = mtime;
     inode->ctime = ctime;
@@ -176,6 +174,30 @@ int readFat(int position)
     return fb->destination[destinationCount];
 }
 
+char *formatFileName(char *input)
+{
+    int count = 0;
+    while (*input != '\0')
+    {
+        input++;
+        count++;
+    }
+
+    while (*input != '/' && count > 0)
+    {
+        input--;
+        count--;
+    }
+    if (*input == '/')
+    {
+        return input + 1;
+    }
+    else
+    {
+        return input;
+    }
+}
+
 void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
@@ -209,13 +231,15 @@ void dataCreation(int argc, char *argv[])
             }
             //set inode and root entries
             struct stat fs;
-            stat(argv[i], &fs);
+            char *fileName = argv[i];
+            stat(fileName, &fs);
+
+            fileName = formatFileName(fileName);
             setInodeInRoot(i - 2, true);
             createInode(i - 2,
-                        argv[i],
+                        fileName,
                         fs.st_size,
                         blocksUsed,
-                        fs.st_mode,
                         fs.st_atime,
                         fs.st_mtime,
                         fs.st_ctime,
