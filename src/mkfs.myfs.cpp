@@ -215,7 +215,7 @@ void dataCreation(int argc, char *argv[])
                         argv[i],
                         fs.st_size,
                         blocksUsed,
-                        0444,
+                        fs.st_mode,
                         fs.st_atime,
                         fs.st_mtime,
                         fs.st_ctime,
