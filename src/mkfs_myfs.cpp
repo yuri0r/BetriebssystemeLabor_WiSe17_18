@@ -6,76 +6,11 @@
 //  Copyright © 2017 Oliver Waldhorst. All rights reserved.
 //
 
-#include "myfs.h"
-#include "blockdevice.h"
-#include "macros.h"
-#include <iostream>
-#include <string.h>
-#include <fstream>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#define FILE_SYSTEM_NAME 'myFS'
-
-#define BLOCK_SIZE 512
-#define MAX_FILE_SIZE (2 ^ 32) - 1
-#define MAX_FILES 64
-
-#define ROOT_ADDRESS 1
-#define INODES_ADDRESS 2
-#define FIRST_FAT_ADDRESS MAX_FILES + INODES_ADDRESS
-
-#define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
-#define FIRST_DATA_ADDRESS (FIRST_FAT_ADDRESS + FAT_SIZE)
-#define ADDRESS_COUNT_PER_FAT_BLOCK BLOCK_SIZE / 4
-
-// ***********************start structs******************************
-struct SuperBlock
-{
-    int fileSystemName;
-    int blockSize;
-    int maxFileSize;
-    int maxFiles;
-    int fatSize;
-    int adressCounterPerFatBlock;
-    int rootAdress;
-    int inodesAdress;
-    int firsFatAdress;
-    int firstDataAdress;
-};
-
-struct RootBlock
-{
-    // false = for inactive node
-    // true  = active node
-    bool inodesAddress[MAX_FILES] = {0};
-};
-
-struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
-{
-    char fileName[256];   // act of pure rebelion! (also 255 is just ugly) @yuri
-    long fileSize;        // size of file in bytes
-    long usedBlocksCount; // how many 512B Blocks
-    unsigned int mode;    // rwx
-    long atime;           // last access
-    long mtime;           // last modification
-    long ctime;           // last modification of status
-    int firstFatEntry;    // pointer to fat
-    unsigned int userID;  // id Of user
-    unsigned int groupID; // id of group
-};
-
-struct FatBlock
-{
-    int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
-} fatBlock;
-
-// ***************end structs**************************************
+#include "mkfs_myfs.h"
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
 
-void initSuperBlock()
+void mkfs_myfs::initSuperBlock()
 {
     SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
 
@@ -100,7 +35,7 @@ void initSuperBlock()
     }
 }
 
-void setInodeInRoot(int inodeIndex, bool active)
+void mkfs_myfs::setInodeInRoot(int inodeIndex, bool active)
 {
     RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
 
@@ -113,7 +48,7 @@ void setInodeInRoot(int inodeIndex, bool active)
     free(rb);
 }
 
-void createInode(int inodeIndex,
+void mkfs_myfs::createInode(int inodeIndex,
                  char *fileName,
                  long fileSize,
                  long usedBlocksCount,
@@ -148,7 +83,7 @@ void createInode(int inodeIndex,
     }
 }
 
-void writeFat(int start, int destination)
+void mkfs_myfs::writeFat(int start, int destination)
 {
     int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
     int destinationCount = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
@@ -164,7 +99,7 @@ void writeFat(int start, int destination)
     bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
 }
 
-int readFat(int position)
+int mkfs_myfs::readFat(int position)
 {
     int fatBlockCount = position / ADDRESS_COUNT_PER_FAT_BLOCK;
     int destinationCount = position % ADDRESS_COUNT_PER_FAT_BLOCK;
@@ -176,7 +111,7 @@ int readFat(int position)
     return fb->destination[destinationCount];
 }
 
-void dataCreation(int argc, char *argv[])
+void mkfs_myfs::dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
     int firstEntry;
@@ -229,7 +164,7 @@ void dataCreation(int argc, char *argv[])
     }
 }
 
-int main(int argc, char *argv[])
+int mkfs_myfs::main(int argc, char *argv[])
 {
     if (argc < 2)
     {
