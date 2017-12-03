@@ -33,6 +33,8 @@
 
 #define DATA_ADDRESS_OFFSET (FAT_ADDRESS_OFFSET + FAT_SIZE)
 
+#define addressCountPerBlock 128
+
 struct SuperBlock
 {
     int name;
@@ -59,7 +61,7 @@ struct Inode // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @cur
 
 struct FatBlock
 {
-    int destination[16] = {};
+    int destination[addressCountPerBlock] = {};
 } fatBlock;
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
@@ -122,10 +124,10 @@ void createInode(int inodeIndex,
 
 void writeFat(int start, int destination)
 {
-    int fatBlockCount = (start - DATA_ADDRESS_OFFSET) / 16;
-    int destinationCount = (start - DATA_ADDRESS_OFFSET) % 16;
+    int fatBlockCount = (start - DATA_ADDRESS_OFFSET) / addressCountPerBlock;
+    int destinationCount = (start - DATA_ADDRESS_OFFSET) % addressCountPerBlock;
 
-    int destinationIndex = (destination - DATA_ADDRESS_OFFSET) / 16 + (destination - DATA_ADDRESS_OFFSET) % 16;
+    int destinationIndex = (destination - DATA_ADDRESS_OFFSET) / addressCountPerBlock + (destination - DATA_ADDRESS_OFFSET) % addressCountPerBlock;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
@@ -138,8 +140,8 @@ void writeFat(int start, int destination)
 
 int readFat(int position)
 {
-    int fatBlockCount = position / 16;
-    int destinationCount = position % 16;
+    int fatBlockCount = position / addressCountPerBlock;
+    int destinationCount = position % addressCountPerBlock;
 
     FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
 
