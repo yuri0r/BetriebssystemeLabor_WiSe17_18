@@ -24,11 +24,11 @@
 
 #define ROOT_ADDRESS 1
 #define INODES_ADDRESS 2
-#define FIRST_FAT_ADDRESS MAX_FILES + INODES_ADDRESS
+#define FIRST_FAT_ADDRESS (MAX_FILES + INODES_ADDRESS)
 
 #define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
 #define FIRST_DATA_ADDRESS (FIRST_FAT_ADDRESS + FAT_SIZE)
-#define ADDRESS_COUNT_PER_FAT_BLOCK BLOCK_SIZE / 4
+#define ADDRESS_COUNT_PER_FAT_BLOCK (BLOCK_SIZE / 4)
 
 // ***********************start structs******************************
 struct SuperBlock
@@ -136,6 +136,11 @@ void createInode(int inodeIndex,
     inode->userID = userID;
     inode->groupID = groupID;
 
+    std::cout   << "File: " << fileName << std::endl
+                        << "Size: " << fileSize << "Byte" << std::endl
+                        << "used Blocks: " << usedBlocksCount << std::endl
+                        << "firstFatEntry: " << firstFatEntry << std::endl << std::endl;
+
     if (inodeIndex >= 0 && inodeIndex < (FIRST_FAT_ADDRESS - INODES_ADDRESS))
     {
         bd->write(inodeIndex + INODES_ADDRESS, (char *)inode);
@@ -222,12 +227,12 @@ void dataCreation(int argc, char *argv[])
                 char *filewriter = filebuffer + i;
                 bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
                 int j = i + BLOCK_SIZE;
-                addressCounter++;
                 if (j < size)
                 {
                     writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
                     blocksUsed++;
                 }
+                addressCounter++;
             }
             //set inode and root entries
             struct stat fs;
@@ -247,7 +252,6 @@ void dataCreation(int argc, char *argv[])
                         fs.st_uid,
                         fs.st_gid);
 
-            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", Size: " << size << "Byte" << std::endl;
             free(filebuffer);
         }
     }
