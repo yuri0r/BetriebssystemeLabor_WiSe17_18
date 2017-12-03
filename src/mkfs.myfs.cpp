@@ -117,7 +117,6 @@ void createInode(int inodeIndex,
                  char *fileName,
                  long fileSize,
                  long usedBlocksCount,
-                 unsigned int mode,
                  long atime,
                  long mtime,
                  long ctime,
@@ -130,7 +129,6 @@ void createInode(int inodeIndex,
     strcpy(inode->fileName, fileName);
     inode->fileSize = fileSize;
     inode->usedBlocksCount = usedBlocksCount;
-    inode->mode = mode;
     inode->atime = atime;
     inode->mtime = mtime;
     inode->ctime = ctime;
@@ -176,6 +174,47 @@ int readFat(int position)
     return fb->destination[destinationCount];
 }
 
+char *jmpToEnd(char *input)
+{
+    printf("starting prozedure \nmoving to the end of: \"%s\" ", input);
+
+    return input;
+}
+
+char *extract(char *input)
+{
+    char *orig = jmpToEnd(input);
+
+    printf("searching for \"::\" in the string...\n");
+
+    printf("there was nothing to find \nend of prozedure\n\n");
+    return input;
+}
+
+char *formatFileName(char *input)
+{
+    int count = 0;
+    while (*input != '\0')
+    {
+        input++;
+        count++;
+    }
+
+    while (*input != '/' && count > 0)
+    {
+        input--;
+        count--;
+    }
+    if (*input == '/')
+    {
+        return input + 1;
+    }
+    else
+    {
+        return input;
+    }
+}
+
 void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
@@ -209,13 +248,15 @@ void dataCreation(int argc, char *argv[])
             }
             //set inode and root entries
             struct stat fs;
-            stat(argv[i], &fs);
+            char *fileName = argv[i];
+            stat(fileName, &fs);
+
+            fileName = formatFileName(fileName);
             setInodeInRoot(i - 2, true);
             createInode(i - 2,
-                        argv[i],
+                        fileName,
                         fs.st_size,
                         blocksUsed,
-                        0444,
                         fs.st_atime,
                         fs.st_mtime,
                         fs.st_ctime,
