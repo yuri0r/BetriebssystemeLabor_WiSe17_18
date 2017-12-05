@@ -62,6 +62,13 @@ int main(int argc, char *argv[]) {
     struct stat metadata;
     
     // TODO: Implement file system generation & copying of files here
+    /**
+     * verifies, that number of arguments is legal
+     * prints number of arguments
+     * creates new file- container in path
+     * gives back the address of each container- file
+     *
+     */
     if (argc < 2) {
         std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... file n>";
         return 1;
@@ -72,12 +79,16 @@ int main(int argc, char *argv[]) {
     BlockDevice *bd  = new BlockDevice(BLOCK_SIZE);
     bd->create(containerPath);
 
-    for(int i=0;i<argc;i++){
+    for(int i = 0; i < argc; i++){
         std::cout << "Argument " << i << ": "  <<  argv[i] << std::endl;
         bd->write(DATA_ADRESS + i, argv[i]);         //argv[] can not exceed one block in size
     }
 
     // TODO create Superblock
+    /**
+     * allocates space for SuperBlock
+     * fills SuperBlock with content
+     */
     char* superBlockContent  = "our nice super file system of doom and citty cats <333";
     char* buffer = (char*)malloc(BLOCK_SIZE);
 
@@ -94,7 +105,14 @@ int main(int argc, char *argv[]) {
     // End of create FAT
 
     // TODO create INODES
-    for (int i=2; i<argc; i++){
+    /**
+     * extracts filenames from arguments
+     * verifies filename validity
+     *
+     * allocates space for inode content and fills it with the required data
+     *
+     */
+    for (int i = 2; i < argc; i++){
         char* name = argv[i]; 
 
         if(stat(argv[i],&metadata)==-1){     //reading metadata documentation to stat():https://linux.die.net/man/2/stat
