@@ -9,178 +9,24 @@
 #include "myfs.h"
 #include "blockdevice.h"
 #include "macros.h"
+#include "superBlockManager.h"
+#include "inodeManager.h"
+#include "fatManager.h"
+#include "fsConfig.h"
+#include "rootManager.h"
 #include <iostream>
 #include <string.h>
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define FILE_SYSTEM_NAME 'myFS'
-
-#define BLOCK_SIZE 512
-#define MAX_FILE_SIZE (2 ^ 32) - 1
-#define MAX_FILES 64
-
-#define ROOT_ADDRESS 1
-#define INODES_ADDRESS 2
-#define FIRST_FAT_ADDRESS (MAX_FILES + INODES_ADDRESS)
-
-#define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
-#define FIRST_DATA_ADDRESS (FIRST_FAT_ADDRESS + FAT_SIZE)
-#define ADDRESS_COUNT_PER_FAT_BLOCK (BLOCK_SIZE / 4)
-
-// ***********************start structs******************************
-struct SuperBlock
-{
-    int fileSystemName;
-    int blockSize;
-    int maxFileSize;
-    int maxFiles;
-    int fatSize;
-    int adressCounterPerFatBlock;
-    int rootAdress;
-    int inodesAdress;
-    int firsFatAdress;
-    int firstDataAdress;
-};
-
-struct RootBlock
-{
-    // false = for inactive node
-    // true  = active node
-    bool inodesAddress[MAX_FILES] = {0};
-};
-
-struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
-{
-    char fileName[256];       // act of pure rebelion! (also 255 is just ugly) @yuri
-    long fileSize;            // size of file in bytes
-    long usedBlocksCount;     // how many 512B Blocks
-    unsigned int mode = 0444; // rwx
-    long atime;               // last access
-    long mtime;               // last modification
-    long ctime;               // last modification of status
-    int firstFatEntry;        // pointer to fat
-    unsigned int userID;      // id Of user
-    unsigned int groupID;     // id of group
-};
-
-struct FatBlock
-{
-    int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
-};
-
-// ***************end structs**************************************
+using namespace fsConfig;
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
-
-void initSuperBlock()
-{
-    SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
-
-    sb->fileSystemName = FILE_SYSTEM_NAME;
-    sb->blockSize = BLOCK_SIZE;
-    sb->maxFileSize = MAX_FILE_SIZE;
-    sb->maxFiles = MAX_FILES;
-    sb->fatSize = FAT_SIZE;
-    sb->adressCounterPerFatBlock = ADDRESS_COUNT_PER_FAT_BLOCK;
-    sb->rootAdress = ROOT_ADDRESS;
-    sb->inodesAdress = INODES_ADDRESS;
-    sb->firsFatAdress = FIRST_FAT_ADDRESS;
-    sb->firstDataAdress = FIRST_DATA_ADDRESS;
-
-    if (sizeof(sb) > BLOCK_SIZE)
-    {
-        printf("definition to large");
-    }
-    else
-    {
-        bd->write(0, (char *)sb);
-    }
-}
-
-void setInodeInRoot(int inodeIndex, bool active)
-{
-    RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
-
-    bd->read(ROOT_ADDRESS, (char *)rb);
-
-    rb->inodesAddress[inodeIndex] = active;
-
-    bd->write(ROOT_ADDRESS, (char *)rb);
-
-    free(rb);
-}
-
-void createInode(int inodeIndex,
-                 char *fileName,
-                 long fileSize,
-                 long usedBlocksCount,
-                 long atime,
-                 long mtime,
-                 long ctime,
-                 int firstFatEntry,
-                 unsigned int userID,
-                 unsigned int groupID)
-{
-    InodeBlock *inode = (InodeBlock *)malloc(BLOCK_SIZE);
-
-    strcpy(inode->fileName, fileName);
-    inode->fileSize = fileSize;
-    inode->usedBlocksCount = usedBlocksCount;
-    inode->atime = atime;
-    inode->mtime = mtime;
-    inode->ctime = ctime;
-    inode->firstFatEntry = firstFatEntry;
-    inode->userID = userID;
-    inode->groupID = groupID;
-
-    std::cout   << "File: " << fileName << std::endl
-                        << "Size: " << fileSize << "Byte" << std::endl
-                        << "used Blocks: " << usedBlocksCount << std::endl
-                        << "firstFatEntry: " << firstFatEntry << std::endl << std::endl;
-
-    if (inodeIndex >= 0 && inodeIndex < (FIRST_FAT_ADDRESS - INODES_ADDRESS))
-    {
-        bd->write(inodeIndex + INODES_ADDRESS, (char *)inode);
-    }
-    else
-    {
-        std::cout << "ERROR not in Inode Space: " << inodeIndex << std::endl;
-    }
-}
-
-void writeFat(int start, int destination)
-{
-    int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int startIndex = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    int destinationBlock = (destination - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = (destination - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    int destinationIndex = destinationBlock * ADDRESS_COUNT_PER_FAT_BLOCK + destinationCount;
-
-    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
-
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-
-    fb->destination[startIndex] = destinationIndex;
-
-    bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-}
-
-int readFat(int position)
-{
-    int fatBlockCount = position / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = position % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
-
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-
-    return fb->destination[destinationCount];
-}
+SuperBlockManager *sbmgr = new SuperBlockManager();
+InodeManager *imgr = new InodeManager();
+FatManager *fmgr = new FatManager();
+RootManager *rmgr = new RootManager();
 
 char *formatFileName(char *input)
 {
@@ -206,12 +52,15 @@ char *formatFileName(char *input)
     }
 }
 
-bool checkDuplicate (char* fileName, int argcNum, int argc, char *argv[]){
-    char* testName;
-    for(int i = (argcNum-1); i > 1; i--){
+bool checkDuplicate(char *fileName, int argcNum, int argc, char *argv[])
+{
+    char *testName;
+    for (int i = (argcNum - 1); i > 1; i--)
+    {
         testName = formatFileName(argv[i]);
-        if(strcmp(testName,fileName)==0){
-             return true;
+        if (strcmp(testName, fileName) == 0)
+        {
+            return true;
         }
     }
     return false;
@@ -227,7 +76,8 @@ void dataCreation(int argc, char *argv[])
     {
         char *fileName = argv[i];
         fileName = formatFileName(fileName);
-        if (!checkDuplicate(fileName, i, argc, argv)) {
+        if (!checkDuplicate(fileName, i, argc, argv))
+        {
             std::streampos size;
             std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
             if (file.is_open())
@@ -246,7 +96,7 @@ void dataCreation(int argc, char *argv[])
                     int j = i + BLOCK_SIZE;
                     if (j < size)
                     {
-                        writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                        fmgr->writeFat(bd, FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
                         blocksUsed++;
                     }
                     addressCounter++;
@@ -255,8 +105,8 @@ void dataCreation(int argc, char *argv[])
                 struct stat fs;
                 stat(fileName, &fs);
 
-                setInodeInRoot(i - 2, true); //marks inode as valid in root
-                createInode(i - 2,
+                rmgr->setInode(bd, i - 2, true); //marks inode as valid in root
+                imgr->createInode(bd, i - 2,
                             fileName,
                             fs.st_size,
                             blocksUsed,
@@ -266,17 +116,21 @@ void dataCreation(int argc, char *argv[])
                             firstEntry,
                             fs.st_uid,
                             fs.st_gid);
-                
+
                 free(filebuffer);
             }
-        } else {
-            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", name allready in use!" << std::endl;
+        }
+        else
+        {
+            std::cout << "File: " << argv[i] << "\nname allready in use! \n"
+                      << std::endl;
         }
     }
 }
 
 int main(int argc, char *argv[])
 {
+
     if (argc < 2)
     {
         std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... file n>";
@@ -287,7 +141,7 @@ int main(int argc, char *argv[])
 
     bd->create(argv[1]); // argv[1] = containerPath
 
-    initSuperBlock();
+    sbmgr->init(bd);
 
     dataCreation(argc, argv);
 
