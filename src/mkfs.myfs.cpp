@@ -215,16 +215,12 @@ char *formatFileName(char *input)
     }
 }
 
-bool checkDuplicate (char* fileName){
-    for(int i = 0; i < MAX_FILES; i++){
-        char *inodeContent = (char*)malloc(BLOCK_SIZE);
-        bd->read((INODES_ADDRESS+i) , (char*) inodeContent);
-        char *cutOutName = (char*)malloc(BLOCK_SIZE);
-        for(int i = 0; i < 256; i++){
-            cutOutName[i] = inodeContent[i];
-        }
-        if(std::strcmp(cutOutName,fileName)==0){
-            return true;
+bool checkDuplicate (char* fileName, int argcNum, int argc, char *argv[]){
+    char* testName;
+    for(int i = (argcNum-1); i > 1; i--){
+        testName = formatFileName(argv[i]);
+        if(std::strcmp(testName,fileName)==0){
+             return true;
         }
     }
     return false;
@@ -240,9 +236,7 @@ void dataCreation(int argc, char *argv[])
     {
         char *fileName = argv[i];
         fileName = formatFileName(fileName);
-        char* null = (char*)malloc(BLOCK_SIZE); 
-        bd->write(FIRST_DATA_ADDRESS, null);
-        if(checkDuplicate(fileName)==false){
+        if(checkDuplicate(fileName, i, argc, argv)==false){
             std::streampos size;
             std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
             if (file.is_open())
