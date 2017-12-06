@@ -43,6 +43,7 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
+    //TODO
     LOGM();
     return 0;
 }
@@ -108,11 +109,13 @@ int MyFS::fuseUtime(const char *path, struct utimbuf *ubuf) {
 }
 
 int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
+    //TODO?
     LOGM();
     return 0;
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
+    //TODO?
     LOGM();
     return 0;
 }
