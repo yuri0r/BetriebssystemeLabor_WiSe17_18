@@ -17,7 +17,7 @@ void InodeManager::createInode(BlockDevice* bd, int inodeIndex,
                  unsigned int userID,
                  unsigned int groupID)
 {
-    InodeBlock *inode = (InodeBlock *)malloc(BLOCK_SIZE);
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
 
     strcpy(inode->fileName, fileName);
     inode->fileSize = fileSize;

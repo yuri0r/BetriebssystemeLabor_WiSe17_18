@@ -5,7 +5,7 @@
 #include "blockdevice.h"
 #include <stdlib.h>
 
-struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
+struct InodeBlockStruct // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
     char fileName[256];                 // act of pure rebelion! (also 255 is just ugly) @yuri
     long fileSize;                      // size of file in bytes
