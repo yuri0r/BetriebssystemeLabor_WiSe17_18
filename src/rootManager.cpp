@@ -17,10 +17,18 @@ void RootManager::setInode(BlockDevice *bd, int inodeIndex, bool active)
     free(rb);
 }
 
-RootBlockStruct getRootBlock(BlockDevice *bd)
+RootBlockStruct RootManager::getRootBlock(BlockDevice *bd)
 {
     RootBlockStruct *rb;
     bd->read(ROOT_ADDRESS, (char *)rb);
     return *rb;
-    
+
+}
+
+bool RootManager::isValid(BlockDevice *bd, int index)
+{
+    RootBlockStruct *rb;
+    bd->read(ROOT_ADDRESS, (char *)rb);
+    return rb->inodesAddress[index];
+
 }

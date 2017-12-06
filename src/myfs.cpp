@@ -9,14 +9,27 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <unistd.h>
 
 #include "myfs.h"
 #include "myfs-info.h"
 #include "fsConfig.h"
+#include "myfs.h"
+#include "blockdevice.h"
+#include "macros.h"
+#include "superBlockManager.h"
 #include "inodeManager.h"
+#include "fatManager.h"
+#include "fsConfig.h"
+#include "rootManager.h"
+using namespace fsConfig;
 
 MyFS* MyFS::_instance = NULL;
-BlockDevice bd;
+BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
+SuperBlockManager *sbmgr = new SuperBlockManager();
+InodeManager *imgr = new InodeManager();
+FatManager *fmgr = new FatManager();
+RootManager *rmgr = new RootManager();
 
 #define RETURN_ERRNO(x) (x) == 0 ? 0 : -errno
 
@@ -47,10 +60,13 @@ MyFS::~MyFS() {
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
     //TODO
-    
+
     if ( strcmp( path, "/" ) == 0 )
 	{
-		statbuf->st_mode = S_IFDIR | 0555;
+        statbuf->st_uid = getuid();
+        statbuf->st_gid = getgid();
+         
+        statbuf->st_mode = S_IFDIR | 0555;
 		statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
 	}
     else
@@ -190,15 +206,19 @@ int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
     //TODO
     LOGM();
+    //RootBlockStruct rb = rmgr->getRootBlock(bd); // does crash somewhere...
 
 	filler( buf, ".", NULL, 0 ); // Current Directory
-	//filler( buf, "..", NULL, 0 ); // Parent Directory
-	
-	if ( strcmp( path, "/" ) == 0 ) // If the user is trying to show the files/directories of the root directory show the following
-	{
-		filler( buf, "hello", NULL, 0 );
-		filler( buf, "pls", NULL, 0 );
-	}
+	filler( buf, "..", NULL, 0 ); // Parent Directory
+    filler( buf, "testEntry", NULL, 0 );
+
+
+    for (int i = 0; i < MAX_FILES; i++){
+        if (true){
+            
+            //filler(buf, imgr->getFileName(bd,i), NULL, 0); //also does crash
+        }
+    }
 	
 	return 0;
 }
@@ -233,7 +253,8 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     LOGF("Container file name: %s", ((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     
     // TODO: Enter your code here!
-    bd = BlockDevice(fsConfig::BLOCK_SIZE);
+    
+
     return 0;
 }
 
