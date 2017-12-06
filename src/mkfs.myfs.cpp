@@ -206,6 +206,17 @@ char *formatFileName(char *input)
     }
 }
 
+bool checkDuplicate (char* fileName, int argcNum, int argc, char *argv[]){
+    char* testName;
+    for(int i = (argcNum-1); i > 1; i--){
+        testName = formatFileName(argv[i]);
+        if(strcmp(testName,fileName)==0){
+             return true;
+        }
+    }
+    return false;
+}
+
 void dataCreation(int argc, char *argv[])
 {
     int addressCounter = 0;
@@ -214,48 +225,52 @@ void dataCreation(int argc, char *argv[])
 
     for (int i = 2; i < argc; i++)
     {
-        std::streampos size;
-        std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
-        if (file.is_open())
-        {
-            size = file.tellg();
-            char *filebuffer = (char *)malloc(size); //save file localy
-            file.seekg(0, std::ios::beg);
-            file.read(filebuffer, size);
-            file.close();
-            firstEntry = addressCounter;
-            blocksUsed = 1;
-            for (int i = 0; i < size; i += BLOCK_SIZE)
+        char *fileName = argv[i];
+        fileName = formatFileName(fileName);
+        if (!checkDuplicate(fileName, i, argc, argv)) {
+            std::streampos size;
+            std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
+            if (file.is_open())
             {
-                char *filewriter = filebuffer + i;
-                bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
-                int j = i + BLOCK_SIZE;
-                if (j < size)
+                size = file.tellg();
+                char *filebuffer = (char *)malloc(size); //save file localy
+                file.seekg(0, std::ios::beg);
+                file.read(filebuffer, size);
+                file.close();
+                firstEntry = addressCounter;
+                blocksUsed = 1;
+                for (int i = 0; i < size; i += BLOCK_SIZE)
                 {
-                    writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
-                    blocksUsed++;
+                    char *filewriter = filebuffer + i;
+                    bd->write(FIRST_DATA_ADDRESS + addressCounter, filewriter);
+                    int j = i + BLOCK_SIZE;
+                    if (j < size)
+                    {
+                        writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                        blocksUsed++;
+                    }
+                    addressCounter++;
                 }
-                addressCounter++;
+                //set inode and root entries
+                struct stat fs;
+                stat(fileName, &fs);
+
+                setInodeInRoot(i - 2, true); //marks inode as valid in root
+                createInode(i - 2,
+                            fileName,
+                            fs.st_size,
+                            blocksUsed,
+                            fs.st_atime,
+                            fs.st_mtime,
+                            fs.st_ctime,
+                            firstEntry,
+                            fs.st_uid,
+                            fs.st_gid);
+                
+                free(filebuffer);
             }
-            //set inode and root entries
-            struct stat fs;
-            char *fileName = argv[i];
-            stat(fileName, &fs);
-
-            fileName = formatFileName(fileName);
-            setInodeInRoot(i - 2, true); //marks inode as valid in root
-            createInode(i - 2,
-                        fileName,
-                        fs.st_size,
-                        blocksUsed,
-                        fs.st_atime,
-                        fs.st_mtime,
-                        fs.st_ctime,
-                        firstEntry,
-                        fs.st_uid,
-                        fs.st_gid);
-
-            free(filebuffer);
+        } else {
+            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", name allready in use!" << std::endl;
         }
     }
 }
