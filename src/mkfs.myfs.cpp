@@ -11,6 +11,7 @@
 #include "macros.h"
 #include "superBlockManager.h"
 #include "inodeManager.h"
+#include "fatManager.h"
 #include "fsConfig.h"
 #include <iostream>
 #include <string.h>
@@ -29,16 +30,13 @@ struct RootBlock
     bool inodesAddress[MAX_FILES] = {0};
 };
 
-struct FatBlock
-{
-    int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
-};
 
 // ***************end structs**************************************
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
 SuperBlockManager *sbmgr = new SuperBlockManager();
 InodeManager *imgr = new InodeManager();
+FatManager *fmgr = new FatManager();
 
 void setInodeInRoot(int inodeIndex, bool active) {
     RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
@@ -50,37 +48,6 @@ void setInodeInRoot(int inodeIndex, bool active) {
     bd->write(ROOT_ADDRESS, (char *)rb);
 
     free(rb);
-}
-
-void writeFat(int start, int destination)
-{
-    int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int startIndex = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    int destinationBlock = (destination - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = (destination - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    int destinationIndex = destinationBlock * ADDRESS_COUNT_PER_FAT_BLOCK + destinationCount;
-
-    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
-
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-
-    fb->destination[startIndex] = destinationIndex;
-
-    bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-}
-
-int readFat(int position)
-{
-    int fatBlockCount = position / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = position % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    FatBlock *fb = (FatBlock *)malloc(BLOCK_SIZE);
-
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-
-    return fb->destination[destinationCount];
 }
 
 char *formatFileName(char *input)
@@ -151,7 +118,7 @@ void dataCreation(int argc, char *argv[])
                     int j = i + BLOCK_SIZE;
                     if (j < size)
                     {
-                        writeFat(FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                        fmgr->writeFat(bd, FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
                         blocksUsed++;
                     }
                     addressCounter++;
