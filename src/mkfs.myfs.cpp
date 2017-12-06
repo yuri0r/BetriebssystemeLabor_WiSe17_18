@@ -21,7 +21,6 @@ using namespace fsConfig;
 
 // ***********************start structs******************************
 
-
 struct RootBlock
 {
     // false = for inactive node
@@ -31,16 +30,16 @@ struct RootBlock
 
 struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
 {
-    char fileName[256];       // act of pure rebelion! (also 255 is just ugly) @yuri
-    long fileSize;            // size of file in bytes
-    long usedBlocksCount;     // how many 512B Blocks
-    unsigned int mode = 0444; // rwx
-    long atime;               // last access
-    long mtime;               // last modification
-    long ctime;               // last modification of status
-    int firstFatEntry;        // pointer to fat
-    unsigned int userID;      // id Of user
-    unsigned int groupID;     // id of group
+    char fileName[256];                 // act of pure rebelion! (also 255 is just ugly) @yuri
+    long fileSize;                      // size of file in bytes
+    long usedBlocksCount;               // how many 512B Blocks
+    unsigned int mode = S_IFREG | 0444; // rwx
+    long atime;                         // last access
+    long mtime;                         // last modification
+    long ctime;                         // last modification of status
+    int firstFatEntry;                  // pointer to fat
+    unsigned int userID;                // id Of user
+    unsigned int groupID;               // id of group
 };
 
 struct FatBlock
@@ -89,10 +88,11 @@ void createInode(int inodeIndex,
     inode->userID = userID;
     inode->groupID = groupID;
 
-    std::cout   << "File: " << fileName << std::endl
-                        << "Size: " << fileSize << "Byte" << std::endl
-                        << "used Blocks: " << usedBlocksCount << std::endl
-                        << "firstFatEntry: " << firstFatEntry << std::endl << std::endl;
+    std::cout << "File: " << fileName << std::endl
+              << "Size: " << fileSize << "Byte" << std::endl
+              << "used Blocks: " << usedBlocksCount << std::endl
+              << "firstFatEntry: " << firstFatEntry << std::endl
+              << std::endl;
 
     if (inodeIndex >= 0 && inodeIndex < (FIRST_FAT_ADDRESS - INODES_ADDRESS))
     {
@@ -159,12 +159,15 @@ char *formatFileName(char *input)
     }
 }
 
-bool checkDuplicate (char* fileName, int argcNum, int argc, char *argv[]){
-    char* testName;
-    for(int i = (argcNum-1); i > 1; i--){
+bool checkDuplicate(char *fileName, int argcNum, int argc, char *argv[])
+{
+    char *testName;
+    for (int i = (argcNum - 1); i > 1; i--)
+    {
         testName = formatFileName(argv[i]);
-        if(strcmp(testName,fileName)==0){
-             return true;
+        if (strcmp(testName, fileName) == 0)
+        {
+            return true;
         }
     }
     return false;
@@ -180,7 +183,8 @@ void dataCreation(int argc, char *argv[])
     {
         char *fileName = argv[i];
         fileName = formatFileName(fileName);
-        if (!checkDuplicate(fileName, i, argc, argv)) {
+        if (!checkDuplicate(fileName, i, argc, argv))
+        {
             std::streampos size;
             std::ifstream file(argv[i], std::ios::in | std::ios::binary | std::ios::ate); //openfile
             if (file.is_open())
@@ -219,11 +223,14 @@ void dataCreation(int argc, char *argv[])
                             firstEntry,
                             fs.st_uid,
                             fs.st_gid);
-                
+
                 free(filebuffer);
             }
-        } else {
-            std::cout << "File: " << argv[i] << "\nname allready in use! \n" << std::endl;
+        }
+        else
+        {
+            std::cout << "File: " << argv[i] << "\nname allready in use! \n"
+                      << std::endl;
         }
     }
 }
