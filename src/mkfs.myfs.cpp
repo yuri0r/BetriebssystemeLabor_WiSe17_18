@@ -9,41 +9,18 @@
 #include "myfs.h"
 #include "blockdevice.h"
 #include "macros.h"
+#include "superBlock.hpp"
+#include "fsConfig.hpp"
 #include <iostream>
 #include <string.h>
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define FILE_SYSTEM_NAME 'myFS'
-
-#define BLOCK_SIZE 512
-#define MAX_FILE_SIZE (2 ^ 32) - 1
-#define MAX_FILES 64
-
-#define ROOT_ADDRESS 1
-#define INODES_ADDRESS 2
-#define FIRST_FAT_ADDRESS (MAX_FILES + INODES_ADDRESS)
-
-#define FAT_SIZE (MAX_FILE_SIZE / BLOCK_SIZE * MAX_FILES)
-#define FIRST_DATA_ADDRESS (FIRST_FAT_ADDRESS + FAT_SIZE)
-#define ADDRESS_COUNT_PER_FAT_BLOCK (BLOCK_SIZE / 4)
+using namespace fsConfig;
 
 // ***********************start structs******************************
-struct SuperBlock
-{
-    int fileSystemName;
-    int blockSize;
-    int maxFileSize;
-    int maxFiles;
-    int fatSize;
-    int adressCounterPerFatBlock;
-    int rootAdress;
-    int inodesAdress;
-    int firsFatAdress;
-    int firstDataAdress;
-};
+
 
 struct RootBlock
 {
@@ -74,31 +51,7 @@ struct FatBlock
 // ***************end structs**************************************
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
-
-void initSuperBlock()
-{
-    SuperBlock *sb = (SuperBlock *)malloc(BLOCK_SIZE);
-
-    sb->fileSystemName = FILE_SYSTEM_NAME;
-    sb->blockSize = BLOCK_SIZE;
-    sb->maxFileSize = MAX_FILE_SIZE;
-    sb->maxFiles = MAX_FILES;
-    sb->fatSize = FAT_SIZE;
-    sb->adressCounterPerFatBlock = ADDRESS_COUNT_PER_FAT_BLOCK;
-    sb->rootAdress = ROOT_ADDRESS;
-    sb->inodesAdress = INODES_ADDRESS;
-    sb->firsFatAdress = FIRST_FAT_ADDRESS;
-    sb->firstDataAdress = FIRST_DATA_ADDRESS;
-
-    if (sizeof(sb) > BLOCK_SIZE)
-    {
-        printf("definition to large");
-    }
-    else
-    {
-        bd->write(0, (char *)sb);
-    }
-}
+SuperBlock *sb = new SuperBlock();
 
 void setInodeInRoot(int inodeIndex, bool active)
 {
@@ -277,6 +230,7 @@ void dataCreation(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+
     if (argc < 2)
     {
         std::cout << "usuage ./mkfs.myfs <container file> <file1 file2 file3 ... file n>";
@@ -287,7 +241,7 @@ int main(int argc, char *argv[])
 
     bd->create(argv[1]); // argv[1] = containerPath
 
-    initSuperBlock();
+    sb->initSuperBlock(bd);
 
     dataCreation(argc, argv);
 
