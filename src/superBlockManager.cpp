@@ -1,11 +1,10 @@
-#include "superBlock.h"
+#include "superBlockManager.h"
 #include "fsConfig.h"
-#include "blockdevice.h"
 using namespace fsConfig;
 
-SuperBlock::SuperBlock() {}
+SuperBlockManager::SuperBlockManager() {}
 
-void SuperBlock::initSuperBlock(BlockDevice* bd)
+void SuperBlockManager::init(BlockDevice* bd)
 {
     SuperBlockStruct *sb = (SuperBlockStruct *)malloc(BLOCK_SIZE);
 
@@ -20,12 +19,9 @@ void SuperBlock::initSuperBlock(BlockDevice* bd)
     sb->firsFatAdress = FIRST_FAT_ADDRESS;
     sb->firstDataAdress = FIRST_DATA_ADDRESS;
 
-    if (sizeof(sb) > BLOCK_SIZE)
-    {
+    if (sizeof(sb) > BLOCK_SIZE){
         printf("definition to large");
-    }
-    else
-    {
+    } else {
         bd->write(0, (char *)sb);
     }
 }

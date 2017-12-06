@@ -9,7 +9,8 @@
 #include "myfs.h"
 #include "blockdevice.h"
 #include "macros.h"
-#include "superBlock.h"
+#include "superBlockManager.h"
+#include "inodeManager.h"
 #include "fsConfig.h"
 #include <iostream>
 #include <string.h>
@@ -28,20 +29,6 @@ struct RootBlock
     bool inodesAddress[MAX_FILES] = {0};
 };
 
-struct InodeBlock // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
-{
-    char fileName[256];                 // act of pure rebelion! (also 255 is just ugly) @yuri
-    long fileSize;                      // size of file in bytes
-    long usedBlocksCount;               // how many 512B Blocks
-    unsigned int mode = S_IFREG | 0444; // rwx
-    long atime;                         // last access
-    long mtime;                         // last modification
-    long ctime;                         // last modification of status
-    int firstFatEntry;                  // pointer to fat
-    unsigned int userID;                // id Of user
-    unsigned int groupID;               // id of group
-};
-
 struct FatBlock
 {
     int destination[ADDRESS_COUNT_PER_FAT_BLOCK] = {};
@@ -50,10 +37,10 @@ struct FatBlock
 // ***************end structs**************************************
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
-SuperBlock *sb = new SuperBlock();
+SuperBlockManager *sbmgr = new SuperBlockManager();
+InodeManager *imgr = new InodeManager();
 
-void setInodeInRoot(int inodeIndex, bool active)
-{
+void setInodeInRoot(int inodeIndex, bool active) {
     RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
 
     bd->read(ROOT_ADDRESS, (char *)rb);
@@ -63,45 +50,6 @@ void setInodeInRoot(int inodeIndex, bool active)
     bd->write(ROOT_ADDRESS, (char *)rb);
 
     free(rb);
-}
-
-void createInode(int inodeIndex,
-                 char *fileName,
-                 long fileSize,
-                 long usedBlocksCount,
-                 long atime,
-                 long mtime,
-                 long ctime,
-                 int firstFatEntry,
-                 unsigned int userID,
-                 unsigned int groupID)
-{
-    InodeBlock *inode = (InodeBlock *)malloc(BLOCK_SIZE);
-
-    strcpy(inode->fileName, fileName);
-    inode->fileSize = fileSize;
-    inode->usedBlocksCount = usedBlocksCount;
-    inode->atime = atime;
-    inode->mtime = mtime;
-    inode->ctime = ctime;
-    inode->firstFatEntry = firstFatEntry;
-    inode->userID = userID;
-    inode->groupID = groupID;
-
-    std::cout << "File: " << fileName << std::endl
-              << "Size: " << fileSize << "Byte" << std::endl
-              << "used Blocks: " << usedBlocksCount << std::endl
-              << "firstFatEntry: " << firstFatEntry << std::endl
-              << std::endl;
-
-    if (inodeIndex >= 0 && inodeIndex < (FIRST_FAT_ADDRESS - INODES_ADDRESS))
-    {
-        bd->write(inodeIndex + INODES_ADDRESS, (char *)inode);
-    }
-    else
-    {
-        std::cout << "ERROR not in Inode Space: " << inodeIndex << std::endl;
-    }
 }
 
 void writeFat(int start, int destination)
@@ -213,7 +161,7 @@ void dataCreation(int argc, char *argv[])
                 stat(fileName, &fs);
 
                 setInodeInRoot(i - 2, true); //marks inode as valid in root
-                createInode(i - 2,
+                imgr->createInode(bd, i - 2,
                             fileName,
                             fs.st_size,
                             blocksUsed,
@@ -248,7 +196,7 @@ int main(int argc, char *argv[])
 
     bd->create(argv[1]); // argv[1] = containerPath
 
-    sb->initSuperBlock(bd);
+    sbmgr->init(bd);
 
     dataCreation(argc, argv);
 

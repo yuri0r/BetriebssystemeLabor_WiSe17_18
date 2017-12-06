@@ -1,5 +1,5 @@
-#ifndef superBlock_h
-#define superBlock_h
+#ifndef superBlockManager_h
+#define superBlockManager_h
 
 #include "myfs.h"
 #include "blockdevice.h"
@@ -19,10 +19,10 @@ struct SuperBlockStruct
     int firstDataAdress;
 };
 
-class SuperBlock{
+class SuperBlockManager{
     public:
-        SuperBlock();
-        void initSuperBlock(BlockDevice* bd);
+        SuperBlockManager();
+        void init(BlockDevice* bd);
 };
 
 #endif
