@@ -1,21 +1,22 @@
 #include "inodeManager.h"
 #include "fsConfig.h"
+#include "blockdevice.h"
 #include <string.h>
 #include <iostream>
 using namespace fsConfig;
 
 InodeManager::InodeManager() {}
 
-void InodeManager::createInode(BlockDevice* bd, int inodeIndex,
-                 char *fileName,
-                 long fileSize,
-                 long usedBlocksCount,
-                 long atime,
-                 long mtime,
-                 long ctime,
-                 int firstFatEntry,
-                 unsigned int userID,
-                 unsigned int groupID)
+void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
+                               char *fileName,
+                               long fileSize,
+                               long usedBlocksCount,
+                               long atime,
+                               long mtime,
+                               long ctime,
+                               int firstFatEntry,
+                               unsigned int userID,
+                               unsigned int groupID)
 {
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
 
@@ -42,5 +43,18 @@ void InodeManager::createInode(BlockDevice* bd, int inodeIndex,
     else
     {
         std::cout << "ERROR not in Inode Space: " << inodeIndex << std::endl;
+    }
+}
+
+InodeBlockStruct InodeManager::getInode(BlockDevice *bd, char *fileName)
+{
+char *buff;
+InodeBlockStruct *node;
+
+    for (int i = INODES_ADDRESS; i < MAX_FILES; i++ ){
+        node = (InodeBlockStruct*)bd->read(INODES_ADDRESS,buff);
+        if (strcmp(node->fileName ,fileName) == true){
+            return *node;
+        }
     }
 }
