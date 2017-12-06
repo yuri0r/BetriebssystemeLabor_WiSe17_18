@@ -58,3 +58,9 @@ InodeBlockStruct *node;
         }
     }
 }
+
+char* getFileName(BlockDevice *bd, int index){
+    InodeBlockStruct *node;
+    bd->read(INODES_ADDRESS + index, (char*)node);
+    return node->fileName;
+}
