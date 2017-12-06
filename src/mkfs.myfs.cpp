@@ -223,7 +223,7 @@ void dataCreation(int argc, char *argv[])
                 free(filebuffer);
             }
         } else {
-            std::cout << "File " << i - 1 << ": \"" << argv[i] << "\", name allready in use!" << std::endl;
+            std::cout << "File: " << argv[i] << "\nname allready in use! \n" << std::endl;
         }
     }
 }
