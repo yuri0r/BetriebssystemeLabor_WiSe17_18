@@ -28,7 +28,8 @@ MKFS_MYFS_OBJS = $(OBJDIR)/blockdevice.o \
 	$(OBJDIR)/mkfs.myfs.o \
 	$(OBJDIR)/superBlockManager.o \
 	$(OBJDIR)/inodeManager.o \
-	$(OBJDIR)/fatManager.o
+	$(OBJDIR)/fatManager.o \
+	$(OBJDIR)/rootManager.o
 
 # object files for target mount.myfs TODO: add new object files here
 MOUNT_MYFS_OBJS = $(OBJDIR)/blockdevice.o \
@@ -37,7 +38,8 @@ MOUNT_MYFS_OBJS = $(OBJDIR)/blockdevice.o \
 	$(OBJDIR)/mount.myfs.o \
 	$(OBJDIR)/superBlockManager.o \
 	$(OBJDIR)/inodeManager.o \
-	$(OBJDIR)/fatManager.o
+	$(OBJDIR)/fatManager.o \
+	$(OBJDIR)/rootManager.o
 
 # build all targets
 all: $(TARGETS)

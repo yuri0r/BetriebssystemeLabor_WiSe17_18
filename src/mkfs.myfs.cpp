@@ -13,6 +13,7 @@
 #include "inodeManager.h"
 #include "fatManager.h"
 #include "fsConfig.h"
+#include "rootManager.h"
 #include <iostream>
 #include <string.h>
 #include <fstream>
@@ -21,34 +22,11 @@
 #include <unistd.h>
 using namespace fsConfig;
 
-// ***********************start structs******************************
-
-struct RootBlock
-{
-    // false = for inactive node
-    // true  = active node
-    bool inodesAddress[MAX_FILES] = {0};
-};
-
-
-// ***************end structs**************************************
-
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
 SuperBlockManager *sbmgr = new SuperBlockManager();
 InodeManager *imgr = new InodeManager();
 FatManager *fmgr = new FatManager();
-
-void setInodeInRoot(int inodeIndex, bool active) {
-    RootBlock *rb = (RootBlock *)malloc(BLOCK_SIZE);
-
-    bd->read(ROOT_ADDRESS, (char *)rb);
-
-    rb->inodesAddress[inodeIndex] = active;
-
-    bd->write(ROOT_ADDRESS, (char *)rb);
-
-    free(rb);
-}
+RootManager *rmgr = new RootManager();
 
 char *formatFileName(char *input)
 {
@@ -127,7 +105,7 @@ void dataCreation(int argc, char *argv[])
                 struct stat fs;
                 stat(fileName, &fs);
 
-                setInodeInRoot(i - 2, true); //marks inode as valid in root
+                rmgr->setInode(bd, i - 2, true); //marks inode as valid in root
                 imgr->createInode(bd, i - 2,
                             fileName,
                             fs.st_size,
