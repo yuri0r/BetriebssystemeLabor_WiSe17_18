@@ -9,8 +9,8 @@
 #include "myfs.h"
 #include "blockdevice.h"
 #include "macros.h"
-#include "superBlock.hpp"
-#include "fsConfig.hpp"
+#include "superBlock.h"
+#include "fsConfig.h"
 #include <iostream>
 #include <string.h>
 #include <fstream>
