@@ -142,13 +142,13 @@ int MyFS::fuseUtime(const char *path, struct utimbuf *ubuf) {
 }
 
 int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
-    //TODO?
+    //TODO
     LOGM();
     return 0;
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO?
+    //TODO
     LOGM();
     return 0;
 }
@@ -170,6 +170,7 @@ int MyFS::fuseFlush(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
+    // TODO
     return 0;
 }
 
@@ -200,6 +201,7 @@ int MyFS::fuseRemovexattr(const char *path, const char *name) {
 
 int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
+    // TODO
     return 0;
 }
 
@@ -225,6 +227,7 @@ int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t
 
 int MyFS::fuseReleasedir(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
+    // TODO
     return 0;
 }
 
@@ -252,7 +255,7 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     // you can get the containfer file name here:
     LOGF("Container file name: %s", ((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     
-    // TODO: Enter your code here!
+    // TODO : Enter your code here!
     
 
     return 0;
