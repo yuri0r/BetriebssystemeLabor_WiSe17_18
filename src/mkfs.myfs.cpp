@@ -14,6 +14,7 @@
 #include "fatManager.h"
 #include "fsConfig.h"
 #include "rootManager.h"
+#include "containerReader.h"
 #include <iostream>
 #include <string.h>
 #include <fstream>
@@ -27,6 +28,7 @@ SuperBlockManager *sbmgr = new SuperBlockManager();
 InodeManager *imgr = new InodeManager();
 FatManager *fmgr = new FatManager();
 RootManager *rmgr = new RootManager();
+ContainerReader *cr = new ContainerReader();
 
 char *formatFileName(char *input)
 {
@@ -144,6 +146,10 @@ int main(int argc, char *argv[])
     sbmgr->init(bd);
 
     dataCreation(argc, argv);
+
+    //Test
+    char* name1 = cr->reader(bd, 2, 0, 255);
+    std::cout<< name1<< std::endl;
 
     return 0;
 }

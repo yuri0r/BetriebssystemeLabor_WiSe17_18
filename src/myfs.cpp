@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <fsConfig.h>
 
 #include "myfs.h"
 #include "myfs-info.h"
@@ -43,7 +44,6 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
-    //TODO
     LOGM();
     return 0;
 }
@@ -109,13 +109,11 @@ int MyFS::fuseUtime(const char *path, struct utimbuf *ubuf) {
 }
 
 int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
-    //TODO?
     LOGM();
     return 0;
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO?
     LOGM();
     return 0;
 }
@@ -204,7 +202,9 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     LOGF("Container file name: %s", ((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     
     // TODO: Enter your code here!
-    
+
+    //versuche opendir, weiss nicht was für Parameter übergeben werden müssen
+    //MyFS::fuseOpendir(((MyFsInfo *) fuse_get_context()->private_data)->contFile), );
     return 0;
 }
 
