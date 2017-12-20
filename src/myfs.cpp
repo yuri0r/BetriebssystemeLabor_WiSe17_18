@@ -74,6 +74,9 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
         InodeBlockStruct* inode = imgr->getInode(bd, path); 
         if (inode != NULL) {
             statbuf->st_size = inode->fileSize;
+            statbuf->st_atime = inode->atime;
+            statbuf->st_ctime = inode->ctime;
+            statbuf->st_mtime = inode->mtime;
         }
         statbuf->st_mode = S_IFREG | 0444;
 		statbuf->st_nlink = 1;
