@@ -77,6 +77,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
         }
         statbuf->st_mode = S_IFREG | 0444;
 		statbuf->st_nlink = 1;
+            LOGF("filename %s", inode->fileName);
     }
     LOGF("Get atrr %s", path);
     LOGM();

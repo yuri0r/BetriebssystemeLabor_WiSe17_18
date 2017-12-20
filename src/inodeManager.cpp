@@ -48,10 +48,11 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
 
 InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, const char *fileName)
 {
+    fileName++;
     InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    for (int i = INODES_ADDRESS; i < MAX_FILES; i++ ){
+    for (int i = 0; i < MAX_FILES; i++ ){
         bd->read(INODES_ADDRESS + i, (char*)node);
-        if (strcmp(node->fileName ,fileName)){
+        if (strcmp(node->fileName ,fileName)==0){
             return node;
         }
     }
