@@ -59,17 +59,17 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
-    //TODO
+    //TODO filesize, dates
 
     if ( strcmp( path, "/" ) == 0 )
-	{
-        statbuf->st_uid = getuid();
-        statbuf->st_gid = getgid();
+	{   //files in root dir -> file is a directory
+        statbuf->st_uid = getuid();         //user ID
+        statbuf->st_gid = getgid();         //group ID
          
-        statbuf->st_mode = S_IFDIR | 0555;
+        statbuf->st_mode = S_IFDIR | 0555;  //permission bits
 		statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
 	}
-    else
+    else        //all other files, namely regular files
     {
         
         statbuf->st_mode = S_IFREG | 0444;
@@ -150,6 +150,18 @@ int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     //TODO
+    //lookup datablock
+    char* fileName = path;
+    *node = blockStruckt->imgr->getInode(bd, filename);
+    *firstFatEntry = *node->firstFatEntry;
+    int* firstDataAdress = FatManager->readFat(bd, firstFatEntry); 
+    //fill buffer with content of datablock
+    for(int i = 0; i <= BLOCK_SIZE; i++){       //??
+        buf = firstDataAdress;
+        printf(buff);
+    }
+    
+        
     LOGM();
     return 0;
 }
@@ -207,7 +219,7 @@ int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
 }
 
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO
+    //TODO done
     LOGM();
     //RootBlockStruct rb = rmgr->getRootBlock(bd); // does crash somewhere...
 
@@ -217,7 +229,7 @@ int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t
 
     LOG("Show files:");
     for (int i = 0; i < MAX_FILES; i++){
-        char* fileName = imgr->getFileName(bd, i);
+        char* fileName = imgr->getFileName(bd, i); 
         //LOG(fileName);
         //filler(buf, imgr->getFileName(bd,i), NULL, 0); //also does crash
     }
