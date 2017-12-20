@@ -214,12 +214,11 @@ int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t
 	filler( buf, "..", NULL, 0 ); // Parent Directory
     filler( buf, "testEntry", NULL, 0 );
 
-
+    LOG("Show files:");
     for (int i = 0; i < MAX_FILES; i++){
-        if (true){
-            
-            //filler(buf, imgr->getFileName(bd,i), NULL, 0); //also does crash
-        }
+        char* fileName = imgr->getFileName(bd, i);
+        //LOG(fileName);
+        //filler(buf, imgr->getFileName(bd,i), NULL, 0); //also does crash
     }
 	
 	return 0;
@@ -256,7 +255,9 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     LOGF("Container file name: %s", ((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     
     // TODO : Enter your code here!
-    
+    bd->open(((MyFsInfo *) fuse_get_context()->private_data)->contFile);
+    sbmgr->load(bd);
+    LOGF("Block size: %d", sbmgr->sbStruct->blockSize);
 
     return 0;
 }

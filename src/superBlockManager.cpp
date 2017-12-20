@@ -25,3 +25,9 @@ void SuperBlockManager::init(BlockDevice* bd)
         bd->write(0, (char *)sb);
     }
 }
+
+void SuperBlockManager::load(BlockDevice* bd)
+{
+    this->sbStruct = (SuperBlockStruct *)malloc(BLOCK_SIZE);
+    bd->read(0, (char *) this->sbStruct);
+}
