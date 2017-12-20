@@ -18,6 +18,8 @@ class RootManager{
     public:
         RootManager();
         void setInode(BlockDevice* bd, int inodeIndex, bool active);
+        RootBlockStruct getRootBlock(BlockDevice* bd);
+        bool isValid(BlockDevice *bd, int index);
 };
 
 #endif

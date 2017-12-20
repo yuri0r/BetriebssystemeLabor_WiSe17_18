@@ -21,8 +21,10 @@ struct SuperBlockStruct
 
 class SuperBlockManager{
     public:
+        SuperBlockStruct* sbStruct;
         SuperBlockManager();
         void init(BlockDevice* bd);
+        void load(BlockDevice* bd);
 };
 
 #endif
