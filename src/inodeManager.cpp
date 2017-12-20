@@ -46,21 +46,20 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     }
 }
 
-InodeBlockStruct InodeManager::getInode(BlockDevice *bd, char *fileName)
+InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, const char *fileName)
 {
-char *buff;
-InodeBlockStruct *node;
-
+    InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     for (int i = INODES_ADDRESS; i < MAX_FILES; i++ ){
-        node = (InodeBlockStruct*)bd->read(INODES_ADDRESS,buff);
-        if (strcmp(node->fileName ,fileName) == true){
-            return *node;
+        bd->read(INODES_ADDRESS + i, (char*)node);
+        if (strcmp(node->fileName ,fileName)){
+            return node;
         }
     }
+    return NULL;
 }
 
 char* InodeManager::getFileName(BlockDevice *bd, int index){
-    InodeBlockStruct *node = (InodeBlockStruct *)malloc(BLOCK_SIZE);;
+    InodeBlockStruct *node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     bd->read(INODES_ADDRESS + index, (char*)node);
     return node->fileName;
 }
