@@ -19,20 +19,24 @@ struct InodeBlockStruct // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32
     unsigned int groupID;               // id of group
 };
 
-class InodeManager{
-    public:
-        InodeManager();
-        void createInode(BlockDevice* bd,
-                 int inodeIndex,
-                 char *fileName,
-                 long fileSize,
-                 long usedBlocksCount,
-                 long atime,
-                 long mtime,
-                 long ctime,
-                 int firstFatEntry,
-                 unsigned int userID,
-                 unsigned int groupID);
+class InodeManager
+{
+  public:
+    InodeManager();
+    void createInode(BlockDevice *bd,
+                     int inodeIndex,
+                     char *fileName,
+                     long fileSize,
+                     long usedBlocksCount,
+                     long atime,
+                     long mtime,
+                     long ctime,
+                     int firstFatEntry,
+                     unsigned int userID,
+                     unsigned int groupID);
+
+    InodeBlockStruct getInode(BlockDevice *bd, char *fileName);
+    char* getFileName(BlockDevice *bd, int index);
 };
 
 #endif

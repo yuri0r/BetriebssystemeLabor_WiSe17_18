@@ -4,7 +4,8 @@
 
 RootManager::RootManager() {}
 
-void RootManager::setInode(BlockDevice* bd, int inodeIndex, bool active) {
+void RootManager::setInode(BlockDevice *bd, int inodeIndex, bool active)
+{
     RootBlockStruct *rb = (RootBlockStruct *)malloc(BLOCK_SIZE);
 
     bd->read(ROOT_ADDRESS, (char *)rb);
@@ -14,4 +15,20 @@ void RootManager::setInode(BlockDevice* bd, int inodeIndex, bool active) {
     bd->write(ROOT_ADDRESS, (char *)rb);
 
     free(rb);
+}
+
+RootBlockStruct RootManager::getRootBlock(BlockDevice *bd)
+{
+    RootBlockStruct *rb;
+    bd->read(ROOT_ADDRESS, (char *)rb);
+    return *rb;
+
+}
+
+bool RootManager::isValid(BlockDevice *bd, int index)
+{
+    RootBlockStruct *rb;
+    bd->read(ROOT_ADDRESS, (char *)rb);
+    return rb->inodesAddress[index];
+
 }

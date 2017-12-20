@@ -9,11 +9,27 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <unistd.h>
 
 #include "myfs.h"
 #include "myfs-info.h"
+#include "fsConfig.h"
+#include "myfs.h"
+#include "blockdevice.h"
+#include "macros.h"
+#include "superBlockManager.h"
+#include "inodeManager.h"
+#include "fatManager.h"
+#include "fsConfig.h"
+#include "rootManager.h"
+using namespace fsConfig;
 
 MyFS* MyFS::_instance = NULL;
+BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
+SuperBlockManager *sbmgr = new SuperBlockManager();
+InodeManager *imgr = new InodeManager();
+FatManager *fmgr = new FatManager();
+RootManager *rmgr = new RootManager();
 
 #define RETURN_ERRNO(x) (x) == 0 ? 0 : -errno
 
@@ -44,6 +60,23 @@ MyFS::~MyFS() {
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
     //TODO
+
+    if ( strcmp( path, "/" ) == 0 )
+	{
+        statbuf->st_uid = getuid();
+        statbuf->st_gid = getgid();
+         
+        statbuf->st_mode = S_IFDIR | 0555;
+		statbuf->st_nlink = 2; // Why "two" hardlinks instead of "one"? The answer is here: http://unix.stackexchange.com/a/101536
+	}
+    else
+    {
+        
+        statbuf->st_mode = S_IFREG | 0444;
+		statbuf->st_nlink = 1;
+		statbuf->st_size = 1024;
+    }
+    LOGF("Get atrr %s", path);
     LOGM();
     return 0;
 }
@@ -110,13 +143,13 @@ int MyFS::fuseUtime(const char *path, struct utimbuf *ubuf) {
 }
 
 int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
-    //TODO?
+    //TODO
     LOGM();
     return 0;
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO?
+    //TODO
     LOGM();
     return 0;
 }
@@ -138,6 +171,7 @@ int MyFS::fuseFlush(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
+    // TODO
     return 0;
 }
 
@@ -168,16 +202,32 @@ int MyFS::fuseRemovexattr(const char *path, const char *name) {
 
 int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
+    // TODO
     return 0;
 }
 
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
+    //TODO
     LOGM();
-    return 0;
+    //RootBlockStruct rb = rmgr->getRootBlock(bd); // does crash somewhere...
+
+	filler( buf, ".", NULL, 0 ); // Current Directory
+	filler( buf, "..", NULL, 0 ); // Parent Directory
+    filler( buf, "testEntry", NULL, 0 );
+
+    LOG("Show files:");
+    for (int i = 0; i < MAX_FILES; i++){
+        char* fileName = imgr->getFileName(bd, i);
+        //LOG(fileName);
+        //filler(buf, imgr->getFileName(bd,i), NULL, 0); //also does crash
+    }
+	
+	return 0;
 }
 
 int MyFS::fuseReleasedir(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
+    // TODO
     return 0;
 }
 
@@ -190,6 +240,7 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
 
     // Open logfile
     this->logFile= fopen(((MyFsInfo *) fuse_get_context()->private_data)->logFile, "w");
+    
     if(this->logFile == NULL) {
         fprintf(stderr, "ERROR: Cannot open logfile %s\n", ((MyFsInfo *) fuse_get_context()->private_data)->logFile);
         return -1;
@@ -204,8 +255,11 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     // you can get the container file name here:
     LOGF("Container file name: %s", ((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     
-    // TODO: Enter your code here!
-    
+    // TODO : Enter your code here!
+    bd->open(((MyFsInfo *) fuse_get_context()->private_data)->contFile);
+    sbmgr->load(bd);
+    LOGF("Block size: %d", sbmgr->sbStruct->blockSize);
+
     return 0;
 }
 
