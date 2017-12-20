@@ -11,8 +11,14 @@
 #include <cmath>
 #include <fsConfig.h>
 
+#include "blockdevice.h"
+#include "containerReader.h"
 #include "myfs.h"
 #include "myfs-info.h"
+using namespace fsConfig;
+
+BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
+ContainerReader *cr = new ContainerReader();
 
 MyFS* MyFS::_instance = NULL;
 
@@ -170,6 +176,15 @@ int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
     LOGM();
+    filler( buf, ".", NULL, 0 );
+    filler( buf, "..", NULL, 0 );
+    for (int i = 0; i < MAX_FILES; i ++){
+        if((bool)cr->reader(bd,1,i,i)){
+            char* name = (char*)cr->reader(bd,2+i,0,255);
+            filler( buf, name, NULL, 0);
+        }
+        
+    }
     return 0;
 }
 
