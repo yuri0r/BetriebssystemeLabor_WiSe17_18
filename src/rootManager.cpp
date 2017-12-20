@@ -25,6 +25,12 @@ RootBlockStruct RootManager::getRootBlock(BlockDevice *bd)
 
 }
 
+void RootManager::load(BlockDevice *bd)
+{
+    this->rbStruct = (RootBlockStruct *)malloc(BLOCK_SIZE);
+    bd->read(ROOT_ADDRESS, (char *)rbStruct);
+}
+
 bool RootManager::isValid(BlockDevice *bd, int index)
 {
     RootBlockStruct *rb;
