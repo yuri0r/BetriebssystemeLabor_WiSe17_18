@@ -59,7 +59,7 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
-    //TODO
+    // TODO 
 
     if ( strcmp( path, "/" ) == 0 )
 	{
@@ -71,10 +71,16 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
 	}
     else
     {
-        
+        InodeBlockStruct* inode = imgr->getInode(bd, path); 
+        if (inode != NULL) {
+            statbuf->st_size = inode->fileSize;
+            statbuf->st_atime = inode->atime;
+            statbuf->st_ctime = inode->ctime;
+            statbuf->st_mtime = inode->mtime;
+        }
         statbuf->st_mode = S_IFREG | 0444;
 		statbuf->st_nlink = 1;
-		statbuf->st_size = 1024;
+            LOGF("filename %s", inode->fileName);
     }
     LOGF("Get atrr %s", path);
     LOGM();
@@ -206,7 +212,7 @@ int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
 }
 
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO
+    //TODO DONE
     LOGM();
 
 	filler( buf, ".", NULL, 0 ); // Current Directory
