@@ -17,6 +17,7 @@ class FatManager{
         FatManager();
         void writeFat(BlockDevice* bd, int start, int destination);
         int readFat(BlockDevice* bd, int position);
+        
 };
 
 #endif

@@ -154,9 +154,22 @@ int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO
+    //TODO now
     LOGM();
-    return 0;
+    LOGF("--> Trying to read %s, %u, %u", path, offset, size);
+
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+    inode = imgr->getInode(bd, path); 
+
+    char *selectedText = "";
+    int firstFatEntry = 0;
+    if (inode != NULL) {
+        firstFatEntry = inode->firstFatEntry;
+        LOGF("--->DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
+        bd->read(FIRST_DATA_ADDRESS + firstFatEntry, selectedText);
+    }
+    memcpy( buf, selectedText + offset, size );
+    return strlen( selectedText ) - offset;;
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
@@ -218,7 +231,7 @@ int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t
 	filler( buf, ".", NULL, 0 ); // Current Directory
 	filler( buf, "..", NULL, 0 ); // Parent Directory
 
-    LOG("Show files:");
+    LOG("\nShow files:");
 
     for (int i = 0; i < MAX_FILES; i++){
         if (rmgr->rbStruct->inodesAddress[i]) {
