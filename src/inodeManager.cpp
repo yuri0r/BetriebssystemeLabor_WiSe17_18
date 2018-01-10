@@ -29,6 +29,7 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     inode->firstFatEntry = firstFatEntry;
     inode->userID = userID;
     inode->groupID = groupID;
+    inode->mode = S_IFREG | 0444;
 
     std::cout << "File: " << fileName << std::endl
               << "Size: " << fileSize << "Byte" << std::endl

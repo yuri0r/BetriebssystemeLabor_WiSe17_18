@@ -71,9 +71,9 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
 	}
     else
     {
-        LOGF("Try to get attributs from: %s", inode->fileName);
         InodeBlockStruct* inode = imgr->getInode(bd, path); 
         if (inode != NULL) {
+            LOGF("Try to get attributs from: %s", inode->fileName);
             statbuf->st_uid = inode->userID;
             statbuf->st_gid = inode->groupID;
             statbuf->st_size = inode->fileSize;
@@ -81,8 +81,8 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_ctime = inode->ctime;
             statbuf->st_mtime = inode->mtime;
             statbuf->st_mode = inode->mode;
-		    statbuf->st_nlink = 1;
         }
+        statbuf->st_nlink = 1;
     }
     LOGF("Get atrr %s", path);
     LOGM();
@@ -167,7 +167,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     int firstFatEntry = 0;
     if (inode != NULL) {
         firstFatEntry = inode->firstFatEntry;
-        LOGF("--->USER ID %u\n", inode->userID);
+        LOGF("--->USER ID %u", inode->userID);
         LOGF("---->DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
         bd->read(FIRST_DATA_ADDRESS + firstFatEntry, selectedText);
     }

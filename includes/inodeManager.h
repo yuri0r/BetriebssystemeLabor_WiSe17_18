@@ -10,7 +10,7 @@ struct InodeBlockStruct // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32
     char fileName[256];                 // act of pure rebelion! (also 255 is just ugly) @yuri
     long fileSize;                      // size of file in bytes
     long usedBlocksCount;               // how many 512B Blocks
-    unsigned int mode = S_IFREG | 0444; // rwx
+    unsigned int mode; // rwx
     long atime;                         // last access
     long mtime;                         // last modification
     long ctime;                         // last modification of status
