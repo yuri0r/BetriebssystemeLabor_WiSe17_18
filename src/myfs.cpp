@@ -163,7 +163,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = imgr->getInode(bd, path); 
 
-    char *selectedText = "";
+    char *selectedText = (char*)malloc(BLOCK_SIZE);
     int firstFatEntry = 0;
     if (inode != NULL) {
         firstFatEntry = inode->firstFatEntry;
