@@ -61,6 +61,8 @@ MyFS::~MyFS() {
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
     // TODO 
 
+    LOGF("# Try to get attributs from: %s", path);
+
     if ( strcmp( path, "/" ) == 0 )
 	{
         statbuf->st_uid = getuid();
@@ -73,7 +75,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
     {
         InodeBlockStruct* inode = imgr->getInode(bd, path); 
         if (inode != NULL) {
-            LOGF("Try to get attributs from: %s", inode->fileName);
+            LOGF("# Get inode data from: %s", inode->fileName);
             statbuf->st_uid = inode->userID;
             statbuf->st_gid = inode->groupID;
             statbuf->st_size = inode->fileSize;
@@ -81,6 +83,8 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_ctime = inode->ctime;
             statbuf->st_mtime = inode->mtime;
             statbuf->st_mode = inode->mode;
+        } else {
+            LOG("# Inode is empty");
         }
         statbuf->st_nlink = 1;
     }
@@ -158,7 +162,7 @@ int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     //TODO now
     LOGM();
-    LOGF("--> Trying to read %s, %u, %u", path, offset, size);
+    LOGF("# Trying to read %s, %u, %u", path, offset, size);
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = imgr->getInode(bd, path); 
@@ -167,8 +171,8 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     int firstFatEntry = 0;
     if (inode != NULL) {
         firstFatEntry = inode->firstFatEntry;
-        LOGF("--->USER ID %u", inode->userID);
-        LOGF("---->DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
+        LOGF("# USER ID %u", inode->userID);
+        LOGF("# DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
         bd->read(FIRST_DATA_ADDRESS + firstFatEntry, selectedText);
     }
     memcpy( buf, selectedText + offset, size );

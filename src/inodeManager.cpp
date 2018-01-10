@@ -43,7 +43,7 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     }
     else
     {
-        std::cout << "ERROR not in Inode Space: " << inodeIndex << std::endl;
+        std::cout << "ERROR not inn Inode Space: " << inodeIndex << std::endl;
     }
 }
 
@@ -53,7 +53,7 @@ InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, const char *fileName)
     InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     for (int i = 0; i < MAX_FILES; i++ ){
         bd->read(INODES_ADDRESS + i, (char*)node);
-        if (strcmp(node->fileName ,fileName)==0){
+        if (strcmp(node->fileName ,fileName) == 0){
             return node;
         }
     }
