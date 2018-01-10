@@ -71,6 +71,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
 	}
     else
     {
+        LOGF("Try to get attributs from: %s", inode->fileName);
         InodeBlockStruct* inode = imgr->getInode(bd, path); 
         if (inode != NULL) {
             statbuf->st_uid = inode->userID;
@@ -79,10 +80,9 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_atime = inode->atime;
             statbuf->st_ctime = inode->ctime;
             statbuf->st_mtime = inode->mtime;
+            statbuf->st_mode = inode->mode;
+		    statbuf->st_nlink = 1;
         }
-        statbuf->st_mode = S_IFREG | 0444;
-		statbuf->st_nlink = 1;
-            LOGF("filename %s", inode->fileName);
     }
     LOGF("Get atrr %s", path);
     LOGM();
