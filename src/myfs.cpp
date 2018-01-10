@@ -73,6 +73,8 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
     {
         InodeBlockStruct* inode = imgr->getInode(bd, path); 
         if (inode != NULL) {
+            statbuf->st_uid = inode->userID;
+            statbuf->st_gid = inode->groupID;
             statbuf->st_size = inode->fileSize;
             statbuf->st_atime = inode->atime;
             statbuf->st_ctime = inode->ctime;
@@ -165,7 +167,8 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     int firstFatEntry = 0;
     if (inode != NULL) {
         firstFatEntry = inode->firstFatEntry;
-        LOGF("--->DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
+        LOGF("--->USER ID %u\n", inode->userID);
+        LOGF("---->DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
         bd->read(FIRST_DATA_ADDRESS + firstFatEntry, selectedText);
     }
     memcpy( buf, selectedText + offset, size );
