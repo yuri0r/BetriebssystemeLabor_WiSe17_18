@@ -162,21 +162,57 @@ int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
     //TODO now
     LOGM();
-    LOGF("# Trying to read %s, %u, %u", path, offset, size);
+    LOGF("## Trying to read %s, %u, %u", path, offset, size);
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = imgr->getInode(bd, path); 
 
-    char *selectedText = (char*)malloc(BLOCK_SIZE);
-    int firstFatEntry = 0;
-    if (inode != NULL) {
-        firstFatEntry = inode->firstFatEntry;
-        LOGF("# USER ID %u", inode->userID);
-        LOGF("# DataAddress: %u\n", FIRST_DATA_ADDRESS + firstFatEntry);
-        bd->read(FIRST_DATA_ADDRESS + firstFatEntry, selectedText);
+    LOGF("## Size to read = %u", size);
+    int sizeCiel = 0;
+    if (size % BLOCK_SIZE == 0) {
+        sizeCiel = size;
+    } else {
+        sizeCiel = ((size / BLOCK_SIZE) + 1) * BLOCK_SIZE;
     }
-    memcpy( buf, selectedText + offset, size );
-    return strlen( selectedText ) - offset;;
+    LOGF("## SizeCiel to read = %u", size);
+    char *finalText = (char*)malloc(sizeCiel);
+    char *textBlock = (char*)malloc(BLOCK_SIZE);
+
+    int currentFatEntry = offset / BLOCK_SIZE; // Starts to read here
+    int blockCount = sizeCiel / 512; // How many blocks to read
+
+    if (inode != NULL) {
+        LOG("## inode != null");
+        int currentFatAddress = inode->firstFatEntry;
+        int currentBlockCount = 1;
+        if (currentFatEntry != 1) {
+            for (int i = 1; i < currentFatEntry; i++) {
+                currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+                currentBlockCount++;
+            }
+        }
+
+        LOG("## got currentFat Address");
+        LOGF("## currentFat Address = %u", currentFatAddress);
+        LOGF("## Blocks to read = %u", blockCount);
+        // "currentFatAddress" is now the first Block to read real Data
+
+        for (int i = 0; i < blockCount; i++) {
+            if (currentBlockCount <= inode->usedBlocksCount) {
+                currentBlockCount++;
+                textBlock = (char*)calloc(1, BLOCK_SIZE);
+                LOGF("## Read address %u", FIRST_DATA_ADDRESS + currentFatAddress);
+                bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+                LOGF("## Read blockcount: %u", i);
+                memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
+                currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+            }
+        }
+        LOG("## Finished read process");
+    }
+
+    memcpy( buf, finalText + (offset % BLOCK_SIZE), size );
+    return strlen( finalText ) - offset;;
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
