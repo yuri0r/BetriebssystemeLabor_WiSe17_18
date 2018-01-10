@@ -17,6 +17,8 @@ struct RootBlockStruct
 class RootManager{
     public:
         RootManager();
+        RootBlockStruct* rbStruct;
+        void load(BlockDevice* bd);
         void setInode(BlockDevice* bd, int inodeIndex, bool active);
         RootBlockStruct getRootBlock(BlockDevice* bd);
         bool isValid(BlockDevice *bd, int index);

@@ -59,7 +59,7 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
-    //TODO
+    // TODO 
 
     if ( strcmp( path, "/" ) == 0 )
 	{
@@ -71,10 +71,16 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
 	}
     else
     {
-        
+        InodeBlockStruct* inode = imgr->getInode(bd, path); 
+        if (inode != NULL) {
+            statbuf->st_size = inode->fileSize;
+            statbuf->st_atime = inode->atime;
+            statbuf->st_ctime = inode->ctime;
+            statbuf->st_mtime = inode->mtime;
+        }
         statbuf->st_mode = S_IFREG | 0444;
 		statbuf->st_nlink = 1;
-		statbuf->st_size = 1024;
+            LOGF("filename %s", inode->fileName);
     }
     LOGF("Get atrr %s", path);
     LOGM();
@@ -207,19 +213,20 @@ int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
 }
 
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO
+    //TODO DONE
     LOGM();
-    //RootBlockStruct rb = rmgr->getRootBlock(bd); // does crash somewhere...
 
 	filler( buf, ".", NULL, 0 ); // Current Directory
 	filler( buf, "..", NULL, 0 ); // Parent Directory
-    filler( buf, "testEntry", NULL, 0 );
 
     LOG("Show files:");
+
     for (int i = 0; i < MAX_FILES; i++){
-        char* fileName = imgr->getFileName(bd, i);
-        //LOG(fileName);
-        //filler(buf, imgr->getFileName(bd,i), NULL, 0); //also does crash
+        if (rmgr->rbStruct->inodesAddress[i]) {
+            char* fileName = imgr->getFileName(bd, i); 
+            LOGF("File%d: %s", i, fileName);
+            filler(buf, fileName, NULL, 0);
+        }
     }
 	
 	return 0;
@@ -258,7 +265,7 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     // TODO : Enter your code here!
     bd->open(((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     sbmgr->load(bd);
-    LOGF("Block size: %d", sbmgr->sbStruct->blockSize);
+    rmgr->load(bd);
 
     return 0;
 }
