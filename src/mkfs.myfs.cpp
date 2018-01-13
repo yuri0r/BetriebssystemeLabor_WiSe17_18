@@ -101,6 +101,8 @@ void dataCreation(int argc, char *argv[])
                     }
                     addressCounter++;
                 }
+                fmgr->markEoF(bd,FIRST_DATA_ADDRESS + addressCounter);
+
                 //set inode and root entries
                 struct stat fs;
                 stat(fileName, &fs);
