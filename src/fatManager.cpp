@@ -20,6 +20,8 @@ void FatManager::writeFat(BlockDevice* bd, int start, int destination) {
     fb->destination[startIndex] = destinationIndex;
 
     bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
+
+    free(fb);
 }
 
 int FatManager::readFat(BlockDevice* bd, int position) {
@@ -29,6 +31,7 @@ int FatManager::readFat(BlockDevice* bd, int position) {
     FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
 
     bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-
-    return fb->destination[destinationCount];
+    int returnValue = fb->destination[destinationCount];
+    free(fb);
+    return returnValue;
 }
