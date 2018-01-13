@@ -43,6 +43,41 @@ do { fprintf(this->logFile, text "\n"); } while (0)
 do { fprintf(this->logFile, "%s:%d:%s()\n", __FILE__, \
 __LINE__, __func__); } while (0)
 
+InodeBlockStruct* getValidInode(const char *fileName) {
+    fileName++;
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (rmgr->isValid(bd, i)) {
+            inode = imgr->getInodeByIndex(bd, i); 
+            if (strcmp(inode->fileName ,fileName) == 0){
+                return inode;
+            }
+        }
+    }
+
+    free(inode);
+    return NULL;
+}
+
+InodeBlockStruct* clearValidInode(const char *fileName) {
+    fileName++;
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (rmgr->isValid(bd, i)) {
+            inode = imgr->getInodeByIndex(bd, i); 
+            if (strcmp(inode->fileName ,fileName) == 0){
+                rmgr->setInode(bd, i, false);
+                return inode;
+            }
+        }
+    }
+
+    free(inode);
+    return NULL;
+}
+
 MyFS* MyFS::Instance() {
     if(_instance == NULL) {
         _instance = new MyFS();
@@ -73,7 +108,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
 	}
     else
     {
-        InodeBlockStruct* inode = imgr->getInode(bd, path); 
+        InodeBlockStruct* inode = getValidInode(path); 
         if (inode != NULL) {
             LOGF("# Get inode data from: %s", inode->fileName);
             statbuf->st_uid = inode->userID;
@@ -110,6 +145,21 @@ int MyFS::fuseMkdir(const char *path, mode_t mode) {
 
 int MyFS::fuseUnlink(const char *path) {
     LOGM();
+
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+    inode = clearValidInode(path); 
+
+    if (inode != NULL) {
+        int currentFatAddress = inode->firstFatEntry;
+        
+        do {
+            currentFatAddress = fmgr->readAndClearEntry(bd, currentFatAddress);
+        } while (currentFatAddress != -1);
+       
+        return 1;
+    }
+
+
     return 0;
 }
 
@@ -165,7 +215,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     LOGF("## Trying to read %s, %u, %u", path, offset, size);
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    inode = imgr->getInode(bd, path); 
+    inode = getValidInode(path); 
 
     LOGF("## Size to read = %u", size);
     int sizeCiel = 0;
@@ -328,7 +378,6 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     // TODO : Enter your code here!
     bd->open(((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     sbmgr->load(bd);
-    rmgr->load(bd);
 
     return 0;
 }
@@ -346,5 +395,7 @@ int MyFS::fuseCreate(const char *path, mode_t mode, struct fuse_file_info *fileI
 void MyFS::fuseDestroy() {
     LOGM();
 }
+
+
 
 

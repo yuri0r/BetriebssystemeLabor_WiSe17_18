@@ -51,3 +51,18 @@ void FatManager::markEoF(BlockDevice* bd, int entry){
     bd->write(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
     free(fb);
 }
+
+int FatManager::readAndClearEntry(BlockDevice* bd, int entry) {
+    int fatBlockCount = entry / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int destinationCount = entry % ADDRESS_COUNT_PER_FAT_BLOCK;
+
+    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
+
+    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
+    int returnValue = fb->destination[destinationCount];
+    fb->destination[destinationCount] = 0;
+    bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
+    free(fb);
+    
+    return returnValue;
+}

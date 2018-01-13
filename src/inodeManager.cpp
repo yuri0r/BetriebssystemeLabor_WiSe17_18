@@ -60,6 +60,13 @@ InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, const char *fileName)
     return NULL;
 }
 
+InodeBlockStruct* InodeManager::getInodeByIndex(BlockDevice *bd, int index)
+{
+    InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+    bd->read(index + INODES_ADDRESS, (char *)node);
+    return node;
+}
+
 char* InodeManager::getFileName(BlockDevice *bd, int index){
     InodeBlockStruct *node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     bd->read(INODES_ADDRESS + index, (char*)node);

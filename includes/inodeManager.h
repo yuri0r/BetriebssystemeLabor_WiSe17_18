@@ -37,6 +37,7 @@ class InodeManager
 
     InodeBlockStruct* getInode(BlockDevice *bd, const char *fileName);
     char* getFileName(BlockDevice *bd, int index);
+    InodeBlockStruct* getInodeByIndex(BlockDevice *bd, int index);
 };
 
 #endif
