@@ -335,7 +335,7 @@ int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t
     LOG("\nShow files:");
 
     for (int i = 0; i < MAX_FILES; i++){
-        if (rmgr->rbStruct->inodesAddress[i]) {
+        if (rmgr->rbStruct->inodesAddress[i] & rmgr->isValid(bd, i)){
             char* fileName = imgr->getFileName(bd, i); 
             LOGF("File%d: %s", i, fileName);
             filler(buf, fileName, NULL, 0);
