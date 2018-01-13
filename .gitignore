@@ -61,3 +61,5 @@ mkfs.myfs
 mount.myfs
 *.bin
 *.txt
+
+videoTest\.mp4

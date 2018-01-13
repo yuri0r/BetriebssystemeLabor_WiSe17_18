@@ -180,6 +180,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
 
     int currentFatEntry = offset / BLOCK_SIZE; // Starts to read here
     int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks to read
+    int cantReadBlockCount = 0;
 
     if (inode != NULL) {
         LOG("## inode != null");
@@ -187,13 +188,13 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
         int currentBlockCount = 1;
         if (currentFatEntry != 1) {
             for (int i = 0; i < currentFatEntry; i++) {
-                LOGF("read Fat: %u", i);
+                //LOGF("read Fat: %u", i);
                 currentFatAddress = fmgr->readFat(bd, currentFatAddress);
                 currentBlockCount++;
             }
         }
 
-        LOGF("## UserBlockCount = %u", inode->usedBlocksCount);
+        LOGF("## UsedBlockCount = %u", inode->usedBlocksCount);
         LOGF("## currentFat Address = %u", currentFatAddress);
         LOGF("## Blocks to read = %u", blockCount);
         // "currentFatAddress" is now the first Block to read real Data
@@ -202,22 +203,24 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
             if (currentBlockCount <= inode->usedBlocksCount) {
                 currentBlockCount++;
                 textBlock = (char*)calloc(1, BLOCK_SIZE);
-                LOGF("## Read address %u", FIRST_DATA_ADDRESS + currentFatAddress);
+                LOGF("## Read address %u, Fat address %u", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
                 bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-                LOGF("## Read blockcount: %u", i);
+               // LOGF("## Read blockcount: %u", i);
                 memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
                 currentFatAddress = fmgr->readFat(bd, currentFatAddress);
                 free(textBlock);
             } else {
+                cantReadBlockCount++;
                 LOG("##!! Try to read a block out of range of usedBlocksCount");
             }
         }
         LOG("## Finished read process");
     }
 
-    memcpy( buf, finalText + (offset % BLOCK_SIZE), size );
+    memcpy( buf, finalText + (offset % BLOCK_SIZE), size - (cantReadBlockCount * BLOCK_SIZE));
+    free(inode);
     free(finalText);
-    return size;
+    return size - (cantReadBlockCount * BLOCK_SIZE);
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
