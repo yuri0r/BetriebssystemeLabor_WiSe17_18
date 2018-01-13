@@ -16,6 +16,7 @@ class FatManager{
     public:
         FatManager();
         void writeFat(BlockDevice* bd, int start, int destination);
+        void markEoF(BlockDevice* bd, int entry);
         int readFat(BlockDevice* bd, int position);
         
 };
