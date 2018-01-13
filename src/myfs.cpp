@@ -167,6 +167,27 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = imgr->getInode(bd, path); 
 
+    uint32_t blocksToSkip = offset / BLOCK_SIZE; //smaller blocksize -> 0
+    uint32_t blocksToRead = ((offset + size) / BLOCK_SIZE ) - blocksToSkip;
+    uint32_t startOffset = offset % BLOCK_SIZE;
+    uint32_t endOffset = BLOCK_SIZE - ((offset + size) % 512);
+
+    uint32_t blockCounter = 0;
+    if ((offset + size) % BLOCK_SIZE != 0 ) blocksToRead++;
+
+    char *finalText = (char*)malloc(size);
+    char *textBlock = (char*)malloc(BLOCK_SIZE);
+
+    for (int i = blocksToRead; i > 0; i--)
+    {
+        bd->read(blocksToSkip + blockCounter, textBlock);
+        memcpy(finalText + (BLOCK_SIZE * blockCounter), textBlock, BLOCK_SIZE);
+
+        blockCounter++;
+    }
+
+
+
     LOGF("## Size to read = %u", size);
     int sizeCiel = 0;
     if (size % BLOCK_SIZE == 0) {
