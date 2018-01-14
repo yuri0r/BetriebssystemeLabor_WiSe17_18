@@ -120,7 +120,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             LOG("# Get atrributs went successfull");
         } else {
             LOG("# File does not exist!");
-            return ENOENT;
+            return -ENOENT;
         }
         statbuf->st_nlink = 1;
     }
@@ -144,9 +144,16 @@ int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
         for (int index = 0; index < MAX_FILES; index++) {
             if (!rmgr->isValid(bd, index)) {
                 // tODO enter right parameter
-               // imgr->createInode(bd, index, ++path, 0, 0, , , , -1, , , S_IFREG | 0444);
-               // rmgr->setInode(bd, index, true);
+                LOG("Create inode");
+                path++;
+                // TODO weist nicht ob das so stimmt
+                imgr->createInode(bd, index, (char*)path, 0, 0,  time(0), time(0),
+                            time(0), -1, getuid(), getgid(), mode);
 
+                LOG("Set inode active in root block");
+                rmgr->setInode(bd, index, true);
+
+                LOG("Node created");
                 free (inode);
                 return 0;
             }
@@ -159,9 +166,6 @@ int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
         free (inode);
         return EEXIST;
     }
-
-    free(inode);
-    return 0;
 }
 
 int MyFS::fuseMkdir(const char *path, mode_t mode) {
@@ -254,6 +258,12 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
         free(inode);
         return ENOENT;
     }
+    int currentFatAddress = inode->firstFatEntry;
+    if (currentFatAddress == -1) {
+        LOG("# File is empty");
+        free(inode);
+        return 0;
+    }
 
     LOGF("# Size to read = %u", size);
     int sizeCiel = 0;
@@ -271,7 +281,6 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     int cantReadBlockCount = 0;
 
     LOG("# inode != null");
-    int currentFatAddress = inode->firstFatEntry;
     int currentBlockCount = 1;
     if (currentFatEntry != 1) {
         for (int i = 0; i < currentFatEntry; i++) {
@@ -301,7 +310,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
         } else {
             cantReadBlockCount++;
             LOG("# Try to read a block out of range of usedBlocksCount");
-           // enxio = true;
+            // enxio = true;
         }
     }
     LOG("# Finished read process");
