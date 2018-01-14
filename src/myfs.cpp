@@ -94,9 +94,8 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
-    // TODO 
-
-    LOGF("# Try to get attributs from: %s", path);
+    LOGF("\n# Try to get attributs from: %s", path);
+    LOGM();
 
     if ( strcmp( path, "/" ) == 0 )
 	{
@@ -118,13 +117,13 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_ctime = inode->ctime;
             statbuf->st_mtime = inode->mtime;
             statbuf->st_mode = inode->mode;
+            LOG("# Get atrributs went successfull");
         } else {
-            LOG("# Inode is empty");
+
+            LOG("# File does not exist!");
         }
         statbuf->st_nlink = 1;
     }
-    LOGF("Get atrr %s", path);
-    LOGM();
     return 0;
 }
 
@@ -144,8 +143,8 @@ int MyFS::fuseMkdir(const char *path, mode_t mode) {
 }
 
 int MyFS::fuseUnlink(const char *path) {
+    LOGF("\n# Try to delete file: %s", path);
     LOGM();
-
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = clearValidInode(path); 
 
@@ -156,10 +155,17 @@ int MyFS::fuseUnlink(const char *path) {
             currentFatAddress = fmgr->readAndClearEntry(bd, currentFatAddress);
         } while (currentFatAddress != -1);
        
-        return 1;
+        for (int i = 0; i < MAX_FILES; i++) {
+            if (rmgr->isValid(bd, i)) {
+                LOGF("# INODE %u is aktiv", i);
+            }
+        }
+
+        LOGF("# Delete file: %s, successfully", path);
+        return 0;
     }
 
-
+    LOGF("# Couldnt delete file: %s", path);
     return 0;
 }
 
