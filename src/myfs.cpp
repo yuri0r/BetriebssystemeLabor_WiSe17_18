@@ -119,8 +119,8 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_mode = inode->mode;
             LOG("# Get atrributs went successfull");
         } else {
-
             LOG("# File does not exist!");
+            return ENOENT;
         }
         statbuf->st_nlink = 1;
     }
@@ -133,7 +133,34 @@ int MyFS::fuseReadlink(const char *path, char *link, size_t size) {
 }
 
 int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
+    // TODO
+    LOGF("# Create File %s", path);
     LOGM();
+
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+    inode = getValidInode(path);
+
+    if (inode == NULL) {
+        for (int index = 0; index < MAX_FILES; index++) {
+            if (!rmgr->isValid(bd, index)) {
+                // tODO enter right parameter
+               // imgr->createInode(bd, index, ++path, 0, 0, , , , -1, , , S_IFREG | 0444);
+               // rmgr->setInode(bd, index, true);
+
+                free (inode);
+                return 0;
+            }
+        }
+        LOG("# ENOSPC (No free inode)");
+        free (inode);
+        return ENOSPC;
+    } else {
+        LOG("# EEXIST (File with same name exists already)");
+        free (inode);
+        return EEXIST;
+    }
+
+    free(inode);
     return 0;
 }
 
@@ -166,7 +193,7 @@ int MyFS::fuseUnlink(const char *path) {
     }
 
     LOGF("# Couldnt delete file: %s", path);
-    return 0;
+    return ENOENT;
 }
 
 int MyFS::fuseRmdir(const char *path) {
@@ -216,21 +243,26 @@ int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO now
+    LOGF("\n# Trying to read %s, %u, %u", path, offset, size);
     LOGM();
-    LOGF("## Trying to read %s, %u, %u", path, offset, size);
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = getValidInode(path); 
 
-    LOGF("## Size to read = %u", size);
+    if (inode == NULL) {
+        LOG("# File not found");
+        free(inode);
+        return ENOENT;
+    }
+
+    LOGF("# Size to read = %u", size);
     int sizeCiel = 0;
     if (size % BLOCK_SIZE == 0) {
         sizeCiel = size;
     } else {
         sizeCiel = ((size / BLOCK_SIZE) + 1) * BLOCK_SIZE;
     }
-    LOGF("## SizeCiel to read = %u", size);
+    LOGF("# SizeCiel to read = %u", size);
     char *finalText = (char*)malloc(sizeCiel);
     char *textBlock = (char*)malloc(BLOCK_SIZE);
 
@@ -238,45 +270,50 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks to read
     int cantReadBlockCount = 0;
 
-    if (inode != NULL) {
-        LOG("## inode != null");
-        int currentFatAddress = inode->firstFatEntry;
-        int currentBlockCount = 1;
-        if (currentFatEntry != 1) {
-            for (int i = 0; i < currentFatEntry; i++) {
-                //LOGF("read Fat: %u", i);
-                currentFatAddress = fmgr->readFat(bd, currentFatAddress);
-                currentBlockCount++;
-            }
+    LOG("# inode != null");
+    int currentFatAddress = inode->firstFatEntry;
+    int currentBlockCount = 1;
+    if (currentFatEntry != 1) {
+        for (int i = 0; i < currentFatEntry; i++) {
+            //LOGF("read Fat: %u", i);
+            currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+            currentBlockCount++;
         }
-
-        LOGF("## UsedBlockCount = %u", inode->usedBlocksCount);
-        LOGF("## currentFat Address = %u", currentFatAddress);
-        LOGF("## Blocks to read = %u", blockCount);
-        // "currentFatAddress" is now the first Block to read real Data
-
-        for (int i = 0; i < blockCount; i++) {
-            if (currentBlockCount <= inode->usedBlocksCount) {
-                currentBlockCount++;
-                textBlock = (char*)calloc(1, BLOCK_SIZE);
-                LOGF("## Read address %u, Fat address %u", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
-                bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-               // LOGF("## Read blockcount: %u", i);
-                memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
-                currentFatAddress = fmgr->readFat(bd, currentFatAddress);
-                free(textBlock);
-            } else {
-                cantReadBlockCount++;
-                LOG("##!! Try to read a block out of range of usedBlocksCount");
-            }
-        }
-        LOG("## Finished read process");
     }
+
+    LOGF("# UsedBlockCount = %u", inode->usedBlocksCount);
+    LOGF("# currentFat Address = %u", currentFatAddress);
+    LOGF("# Blocks to read = %u", blockCount);
+    // "currentFatAddress" is now the first Block to read real Data
+
+    bool enxio = false;
+
+    for (int i = 0; i < blockCount; i++) {
+        if (currentBlockCount <= inode->usedBlocksCount) {
+            currentBlockCount++;
+            textBlock = (char*)calloc(1, BLOCK_SIZE);
+            LOGF("# Read address %u, Fat address %u", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
+            bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+            // LOGF("## Read blockcount: %u", i);
+            memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
+            currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+            free(textBlock);
+        } else {
+            cantReadBlockCount++;
+            LOG("# Try to read a block out of range of usedBlocksCount");
+           // enxio = true;
+        }
+    }
+    LOG("# Finished read process");
 
     memcpy( buf, finalText + (offset % BLOCK_SIZE), size - (cantReadBlockCount * BLOCK_SIZE));
     free(inode);
     free(finalText);
-    return size - (cantReadBlockCount * BLOCK_SIZE);
+    if (enxio) {
+        return ENXIO;
+    } else {
+        return size - (cantReadBlockCount * BLOCK_SIZE);
+    }
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
@@ -296,7 +333,7 @@ int MyFS::fuseFlush(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
-    // TODO
+    // TODO do we need it?
     return 0;
 }
 
@@ -327,12 +364,11 @@ int MyFS::fuseRemovexattr(const char *path, const char *name) {
 
 int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
-    // TODO
+    // TODO do we need it?
     return 0;
 }
 
 int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fileInfo) {
-    //TODO DONE
     LOGM();
 
 	filler( buf, ".", NULL, 0 ); // Current Directory
@@ -343,7 +379,7 @@ int MyFS::fuseReaddir(const char *path, void *buf, fuse_fill_dir_t filler, off_t
     for (int i = 0; i < MAX_FILES; i++){
         if (rmgr->isValid(bd, i)) {
             char* fileName = imgr->getFileName(bd, i); 
-            LOGF("File%d: %s", i, fileName);
+            LOGF("# File%d: %s", i, fileName);
             filler(buf, fileName, NULL, 0);
         }
     }

@@ -33,7 +33,8 @@ class InodeManager
                      long ctime,
                      int firstFatEntry,
                      unsigned int userID,
-                     unsigned int groupID);
+                     unsigned int groupID,
+                     unsigned int mode);
 
     InodeBlockStruct* getInode(BlockDevice *bd, const char *fileName);
     char* getFileName(BlockDevice *bd, int index);

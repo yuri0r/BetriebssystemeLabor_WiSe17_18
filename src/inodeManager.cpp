@@ -16,7 +16,8 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
                                long ctime,
                                int firstFatEntry,
                                unsigned int userID,
-                               unsigned int groupID)
+                               unsigned int groupID,
+                               unsigned int mode)
 {
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
 
@@ -29,7 +30,7 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     inode->firstFatEntry = firstFatEntry;
     inode->userID = userID;
     inode->groupID = groupID;
-    inode->mode = S_IFREG | 0444;
+    inode->mode = mode;
 
     std::cout << "File: " << fileName << std::endl
               << "Size: " << fileSize << "Byte" << std::endl
