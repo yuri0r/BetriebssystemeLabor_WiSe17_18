@@ -315,6 +315,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     LOG("# Finished read process");
 
     memcpy( buf, finalText + (offset % BLOCK_SIZE), size - (cantReadBlockCount * BLOCK_SIZE));
+    LOGF("Buffer: %s", buf);
     free(inode);
     free(finalText);
     if (enxio) {
@@ -376,14 +377,14 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             }
         }
         inode->usedBlocksCount = usedBlockCountAfterWrite;
-        if (inode->fileSize < size + offset) {
-             inode->fileSize = size + offset;
-        }
         LOGF("New usedBlockCount = %u", inode->usedBlocksCount);
-        LOGF("New fileSize = %u", inode->fileSize);
         LOGF("FirstFatEntry after expand = %i", inode->firstFatEntry);
-        imgr->updateInode(bd, inode);
     }
+    if (inode->fileSize < size + offset) {
+            inode->fileSize = size + offset;
+    }
+    LOGF("New fileSize = %u", inode->fileSize);
+    imgr->updateInode(bd, inode);
 
     currentFatAddress = inode->firstFatEntry;
     LOGF("currentFatEntry: %u", currentFatEntry);
@@ -402,12 +403,25 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             currentBlockCount++;
             textBlock = (char*)calloc(1, BLOCK_SIZE);
             LOGF("# Write address %i, Fat address %i", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
-            if (currentBlockCount <= oldUsedBlockCount) {
+            if (currentBlockCount <= oldUsedBlockCount + 1) {
                 bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-                 LOG("bd-read successfull");
+                LOG("bd-read successfull");
             }
             LOGF("after bd-read \n i = %i", i);
-            memcpy(textBlock + (offset % BLOCK_SIZE), buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+            LOGF("Buffer: %s", buf);
+            if (offset > BLOCK_SIZE * i) {
+                if ((size % BLOCK_SIZE) + (offset - (BLOCK_SIZE * i)) > BLOCK_SIZE) {
+                    LOG("CASE 1");
+                    memcpy(textBlock + (offset - (BLOCK_SIZE * i)), buf + (BLOCK_SIZE * i), BLOCK_SIZE - (offset - (BLOCK_SIZE * i)));
+                } else {
+                    LOG("CASE 2");
+                    memcpy(textBlock + (offset - (BLOCK_SIZE * i)), buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+                } 
+            } else {
+                LOG("CASE 3");
+                memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+            }
+           
             LOGF("after memcpy textBlock = %s", textBlock);
             bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
             LOG("after bd-write");
