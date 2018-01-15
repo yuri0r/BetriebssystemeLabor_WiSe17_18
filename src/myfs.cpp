@@ -117,6 +117,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_ctime = inode->ctime;
             statbuf->st_mtime = inode->mtime;
             statbuf->st_mode = inode->mode;
+            LOGF("# FirstFatEntry: %i", inode->firstFatEntry);
             LOG("# Get atrributs went successfull");
         } else {
             LOG("# File does not exist!");
@@ -133,7 +134,6 @@ int MyFS::fuseReadlink(const char *path, char *link, size_t size) {
 }
 
 int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
-    // TODO
     LOGF("# Create File %s", path);
     LOGM();
 
@@ -143,10 +143,8 @@ int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     if (inode == NULL) {
         for (int index = 0; index < MAX_FILES; index++) {
             if (!rmgr->isValid(bd, index)) {
-                // tODO enter right parameter
                 LOG("Create inode");
                 path++;
-                // TODO weist nicht ob das so stimmt
                 imgr->createInode(bd, index, (char*)path, 0, 0,  time(0), time(0),
                             time(0), -1, getuid(), getgid(), mode);
 
@@ -258,6 +256,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
         free(inode);
         return ENOENT;
     }
+
     int currentFatAddress = inode->firstFatEntry;
     if (currentFatAddress == -1) {
         LOG("# File is empty");
@@ -272,7 +271,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     } else {
         sizeCiel = ((size / BLOCK_SIZE) + 1) * BLOCK_SIZE;
     }
-    LOGF("# SizeCiel to read = %u", size);
+    LOGF("# SizeCiel to read = %u", sizeCiel);
     char *finalText = (char*)malloc(sizeCiel);
     char *textBlock = (char*)malloc(BLOCK_SIZE);
 
@@ -326,8 +325,101 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
+    LOGF("\n# Trying to write %s, %u, %u", path, offset, size);
     LOGM();
-    return 0;
+
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+    inode = getValidInode(path); 
+
+    if (inode == NULL) {
+        LOG("# File not found");
+        free(inode);
+        return ENOENT;
+    }
+
+    int oldUsedBlockCount = inode->usedBlocksCount;
+
+    LOGF("# Size to write = %u", size);
+    int sizeCiel = 0;
+    if (size % BLOCK_SIZE == 0) {
+        sizeCiel = size;
+    } else {
+        sizeCiel = ((size / BLOCK_SIZE) + 1) * BLOCK_SIZE;
+    }
+    LOGF("# SizeCiel to write = %u", sizeCiel);
+
+    char *textBlock = (char*)malloc(BLOCK_SIZE);
+
+    int currentFatEntry = offset / BLOCK_SIZE; // Starts to write here
+    LOGF("Start to write in block: %i", currentFatEntry);
+    int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks to write
+    LOGF("Writes %i blocks", blockCount);
+
+    int currentFatAddress = inode->firstFatEntry;
+    int currentLastFatAddress = -1;
+
+    LOGF("FirstFatEntry before expand= %i", inode->firstFatEntry);
+    int usedBlockCountAfterWrite = currentFatEntry + blockCount;
+    if (usedBlockCountAfterWrite > inode->usedBlocksCount) { // Expand FAT if needed
+        LOG("Expand FAT");
+        for (int i = 0; i < usedBlockCountAfterWrite; i++) {
+            if (currentFatAddress != -1) {
+                currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+                if (currentFatAddress != 1) {
+                    currentLastFatAddress = currentFatAddress;
+                }
+            } else {
+                currentLastFatAddress = fmgr->expand(bd, currentLastFatAddress);
+                if (inode->firstFatEntry == -1) {
+                   inode->firstFatEntry = currentLastFatAddress;
+                }
+            }
+        }
+        inode->usedBlocksCount = usedBlockCountAfterWrite;
+        if (inode->fileSize < size + offset) {
+             inode->fileSize = size + offset;
+        }
+        LOGF("New usedBlockCount = %u", inode->usedBlocksCount);
+        LOGF("New fileSize = %u", inode->fileSize);
+        LOGF("FirstFatEntry after expand = %i", inode->firstFatEntry);
+        imgr->updateInode(bd, inode);
+    }
+
+    currentFatAddress = inode->firstFatEntry;
+    LOGF("currentFatEntry: %u", currentFatEntry);
+    int currentBlockCount = 1;
+    if (currentFatEntry != 1) {
+        for (int i = 1; i < currentFatEntry; i++) {
+            LOGF("read Fat: %u", i);
+            currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+            currentBlockCount++;
+        }
+    }
+    
+
+    for (int i = 0; i < blockCount; i++) {
+        if (currentBlockCount <= inode->usedBlocksCount) {
+            currentBlockCount++;
+            textBlock = (char*)calloc(1, BLOCK_SIZE);
+            LOGF("# Write address %i, Fat address %i", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
+            if (currentBlockCount <= oldUsedBlockCount) {
+                bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+                 LOG("bd-read successfull");
+            }
+            LOGF("after bd-read \n i = %i", i);
+            memcpy(textBlock + (offset % BLOCK_SIZE), buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+            LOGF("after memcpy textBlock = %s", textBlock);
+            bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+            LOG("after bd-write");
+            // LOGF("## Read blockcount: %u", i);
+            currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+            free(textBlock);
+        }
+    }
+
+    LOGF("# Write to %s successfull", path);
+    free(inode);
+    return size;
 }
 
 int MyFS::fuseStatfs(const char *path, struct statvfs *statInfo) {

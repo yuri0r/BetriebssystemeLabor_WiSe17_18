@@ -31,6 +31,7 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     inode->userID = userID;
     inode->groupID = groupID;
     inode->mode = mode;
+    inode->index = inodeIndex;
 
     std::cout << "File: " << fileName << std::endl
               << "Size: " << fileSize << "Byte" << std::endl
@@ -72,4 +73,8 @@ char* InodeManager::getFileName(BlockDevice *bd, int index){
     InodeBlockStruct *node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     bd->read(INODES_ADDRESS + index, (char*)node);
     return node->fileName;
+}
+
+void InodeManager::updateInode(BlockDevice *bd, InodeBlockStruct *inode) {
+    bd->write(INODES_ADDRESS + inode->index, (char*)inode);
 }

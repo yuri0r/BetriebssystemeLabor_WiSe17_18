@@ -17,6 +17,7 @@ struct InodeBlockStruct // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32
     int firstFatEntry;                  // pointer to fat
     unsigned int userID;                // id Of user
     unsigned int groupID;               // id of group
+    int index;
 };
 
 class InodeManager
@@ -39,6 +40,7 @@ class InodeManager
     InodeBlockStruct* getInode(BlockDevice *bd, const char *fileName);
     char* getFileName(BlockDevice *bd, int index);
     InodeBlockStruct* getInodeByIndex(BlockDevice *bd, int index);
+    void updateInode(BlockDevice *bd, InodeBlockStruct *inode);
 };
 
 #endif

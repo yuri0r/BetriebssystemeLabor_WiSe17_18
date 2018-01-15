@@ -36,6 +36,42 @@ int FatManager::readFat(BlockDevice* bd, int position) {
     return returnValue;
 }
 
+int FatManager::expand(BlockDevice* bd, int currentLastFatAddress) {
+    int fatBlockCount = currentLastFatAddress / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int destinationCount = currentLastFatAddress % ADDRESS_COUNT_PER_FAT_BLOCK;
+
+    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
+    int nextFreeEntry = getFreeEntry(bd);
+
+    if (nextFreeEntry == -1) {
+        // No fat block is empty
+        return -1;
+    }
+
+    if (currentLastFatAddress != -1) {
+        bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
+        fb->destination[nextFreeEntry];
+        bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
+    }
+
+    free(fb);
+    return nextFreeEntry;
+}
+
+int FatManager::getFreeEntry(BlockDevice* bd) {
+    for (int position = 0; position < FAT_SIZE; position++) {
+        int nextEntry = readFat(bd, position);
+
+        if (nextEntry == 0) {
+            markEoF(bd, position);
+            return position;
+        }
+    }
+
+    // No fat block is empty
+    return -1;
+}
+
 void FatManager::markEoF(BlockDevice* bd, int entry){
 
     int fatBlock = (entry - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys

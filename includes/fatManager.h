@@ -18,7 +18,10 @@ class FatManager{
         void writeFat(BlockDevice* bd, int start, int destination);
         void markEoF(BlockDevice* bd, int entry);
         int readFat(BlockDevice* bd, int position);
+        int expand(BlockDevice* bd, int currentLastFatAddress);
         int readAndClearEntry(BlockDevice* bd, int entry);
+    private:
+        int getFreeEntry(BlockDevice* bd);
 };
 
 #endif
