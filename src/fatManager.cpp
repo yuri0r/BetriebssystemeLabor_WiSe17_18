@@ -49,10 +49,8 @@ int FatManager::expand(BlockDevice* bd, int currentLastFatAddress) {
     }
 
     if (currentLastFatAddress != -1) {
-        bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-        fb->destination[nextFreeEntry];
-        bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-    }
+        writeFat(bd, currentLastFatAddress + FIRST_DATA_ADDRESS, nextFreeEntry + FIRST_DATA_ADDRESS);
+    } 
 
     free(fb);
     return nextFreeEntry;
@@ -72,10 +70,10 @@ int FatManager::getFreeEntry(BlockDevice* bd) {
     return -1;
 }
 
-void FatManager::markEoF(BlockDevice* bd, int entry){
+void FatManager::markEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != FatAddress
 
-    int fatBlock = (entry - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys
-    int blockOffset = ((entry - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK) - 1; //which of the entries in a block
+    int fatBlock = entry / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys
+    int blockOffset = entry % ADDRESS_COUNT_PER_FAT_BLOCK; //which of the entries in a block
 
     FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
 

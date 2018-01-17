@@ -362,17 +362,21 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     LOGF("FirstFatEntry before expand= %i", inode->firstFatEntry);
     int usedBlockCountAfterWrite = currentFatEntry + blockCount;
     if (usedBlockCountAfterWrite > inode->usedBlocksCount) { // Expand FAT if needed
-        LOG("Expand FAT");
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
+            LOG("Expand FAT");
             if (currentFatAddress != -1) {
+                LOGF("CurrentFatAddress: %i", currentFatAddress);
                 currentFatAddress = fmgr->readFat(bd, currentFatAddress);
-                if (currentFatAddress != 1) {
+                if (currentFatAddress != -1) {
                     currentLastFatAddress = currentFatAddress;
                 }
             } else {
+                LOGF("Try to expand, currentLastFatAddress: %i", currentLastFatAddress);
                 currentLastFatAddress = fmgr->expand(bd, currentLastFatAddress);
+                LOGF("CurrentLastAddress after expand: %i", currentLastFatAddress);
                 if (inode->firstFatEntry == -1) {
-                   inode->firstFatEntry = currentLastFatAddress;
+                    inode->firstFatEntry = currentLastFatAddress;
+                    LOG("Switched firstFatEntry");
                 }
             }
         }
@@ -397,7 +401,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         }
     }
     
-
+    LOGF("Buffer: %s", buf);
     for (int i = 0; i < blockCount; i++) {
         if (currentBlockCount <= inode->usedBlocksCount) {
             currentBlockCount++;
@@ -408,7 +412,6 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 LOG("bd-read successfull");
             }
             LOGF("after bd-read \n i = %i", i);
-            LOGF("Buffer: %s", buf);
             if (offset > BLOCK_SIZE * i) {
                 if ((size % BLOCK_SIZE) + (offset - (BLOCK_SIZE * i)) > BLOCK_SIZE) {
                     LOG("CASE 1");
