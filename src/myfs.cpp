@@ -342,12 +342,12 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
 
     LOGF("# Size to write = %u", size);
     int sizeCiel = 0;
-    if (size % BLOCK_SIZE == 0) {
-        sizeCiel = size;
+    if ((size + offset) % BLOCK_SIZE == 0) {
+        sizeCiel = size + offset;
     } else {
-        sizeCiel = ((size / BLOCK_SIZE) + 1) * BLOCK_SIZE;
+        sizeCiel = (((size + offset)/ BLOCK_SIZE) + 1) * BLOCK_SIZE;
     }
-    LOGF("# SizeCiel to write = %u", sizeCiel);
+    LOGF("# FileSize = %u", sizeCiel);
 
     char *textBlock = (char*)malloc(BLOCK_SIZE);
 
@@ -357,20 +357,22 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     LOGF("Writes %i blocks", blockCount);
 
     int currentFatAddress = inode->firstFatEntry;
-    int currentLastFatAddress = -1;
+    int currentLastFatAddress = inode->firstFatEntry; // -1;
 
     LOGF("FirstFatEntry before expand= %i", inode->firstFatEntry);
     int usedBlockCountAfterWrite = currentFatEntry + blockCount;
     if (usedBlockCountAfterWrite > inode->usedBlocksCount) { // Expand FAT if needed
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
-            LOG("Expand FAT");
             if (currentFatAddress != -1) {
                 LOGF("CurrentFatAddress: %i", currentFatAddress);
                 currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+                LOGF("CurrentFatAddress after read: %i", currentFatAddress);
                 if (currentFatAddress != -1) {
+                    LOG("changed currentLastFatAddress");
                     currentLastFatAddress = currentFatAddress;
                 }
             } else {
+                LOG("Expand FAT");
                 LOGF("Try to expand, currentLastFatAddress: %i", currentLastFatAddress);
                 currentLastFatAddress = fmgr->expand(bd, currentLastFatAddress);
                 LOGF("CurrentLastAddress after expand: %i", currentLastFatAddress);
@@ -393,14 +395,17 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     currentFatAddress = inode->firstFatEntry;
     LOGF("currentFatEntry: %u", currentFatEntry);
     int currentBlockCount = 1;
-    if (currentFatEntry != 1) {
-        for (int i = 1; i < currentFatEntry; i++) {
-            LOGF("read Fat: %u", i);
-            currentFatAddress = fmgr->readFat(bd, currentFatAddress);
-            currentBlockCount++;
-        }
+    for (int i = 0; i < offset - BLOCK_SIZE; i = i + BLOCK_SIZE) {
+        LOGF("read Fat: %u", i);
+        currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+        currentBlockCount++;
     }
     
+    int textBlockOffset = 0;
+    bool firstBlockToWrite = true;
+    int bufOffset = 0;
+    int writeSize = 0;
+    int restSize = size;
     LOGF("Buffer: %s", buf);
     for (int i = 0; i < blockCount; i++) {
         if (currentBlockCount <= inode->usedBlocksCount) {
@@ -412,15 +417,25 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 LOG("bd-read successfull");
             }
             LOGF("after bd-read \n i = %i", i);
-            if (offset > BLOCK_SIZE * i) {
-                if ((size % BLOCK_SIZE) + (offset - (BLOCK_SIZE * i)) > BLOCK_SIZE) {
-                    LOG("CASE 1: Dranhaengen");
-                    memcpy(textBlock + (offset - (BLOCK_SIZE * i)), buf + (BLOCK_SIZE * i), BLOCK_SIZE - (offset - (BLOCK_SIZE * i)));
+            if (offset > 0) { // Dranhaengen
+                if (firstBlockToWrite) {
+                    textBlockOffset = offset % BLOCK_SIZE;
+                    bufOffset = 0;
                 } else {
-                    LOG("CASE 2");
-                    memcpy(textBlock + (offset - (BLOCK_SIZE * i)), buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
-                } 
-            } else {
+                    textBlockOffset = 0;
+                    bufOffset = bufOffset + writeSize;
+                }
+                if (restSize + textBlockOffset > BLOCK_SIZE) {
+                    writeSize = BLOCK_SIZE - textBlockOffset;
+                } else {
+                    writeSize = restSize;
+                }
+                LOGF("CurrentBlockCount: %i", currentBlockCount);
+                LOGF("textBlockOffset: %i, bufOffset: %i, writeSize: %i", textBlockOffset, bufOffset, writeSize);
+                memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
+                restSize = restSize - writeSize;
+                firstBlockToWrite = false;
+            } else { // Ueberschreiben
                 LOG("CASE 3: Ueberschreiben");
                 if (i == blockCount - 1) {
                     memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
