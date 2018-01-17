@@ -129,6 +129,10 @@ void dataCreation(int argc, char *argv[])
                       << std::endl;
         }
     }
+    if(argc == 2){
+        char* null = (char*)calloc(BLOCK_SIZE,1);
+        bd->write(FIRST_DATA_ADDRESS, null);
+    }
 }
 
 int main(int argc, char *argv[])
