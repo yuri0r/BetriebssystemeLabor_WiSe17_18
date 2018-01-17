@@ -257,9 +257,9 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
         free(inode);
         return ENOENT;
     }
-
+    int fileSize = inode->fileSize;
     int currentFatAddress = inode->firstFatEntry;
-    if (currentFatAddress == -1) {
+    if (fileSize == 0) {
         LOG("# File is empty");
         free(inode);
         return 0;
@@ -341,11 +341,12 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
 
     char *textBlock = (char*)malloc(BLOCK_SIZE);
     int targetDiffLow = offset % BLOCK_SIZE; // how far the offset pushes beyond block steps
-    int targetDiffHigh = BLOCK_SIZE - ((offset + size) % BLOCK_SIZE) - 1; // how much is missing to last full block step
+    int targetDiffHigh = BLOCK_SIZE - ((offset + size) % BLOCK_SIZE); // how much is missing to last full block step
     int oldUsedBlockCount = inode->usedBlocksCount;
     int newUsedBlockCount = (offset + size + targetDiffHigh) / BLOCK_SIZE; 
     int currentFatEntry = offset / BLOCK_SIZE; // Starts to write here
-
+    int blocksToWrite = (size + targetDiffLow + targetDiffHigh) / BLOCK_SIZE;
+    int adress = inode->firstFatEntry;
     /*
     possible cases:
         1)file size unchanged
@@ -358,8 +359,19 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     LOGF("%u, %u", oldUsedBlockCount , newUsedBlockCount);
     if (oldUsedBlockCount == newUsedBlockCount) {
         LOG("file needs same amount of blocks");
-        for (int i = 0; i < newUsedBlockCount; i++){
-
+        for (int i = 0; i <= blocksToWrite; i++){
+            if (i == 0){
+                LOG("writing first block");
+                memcpy(textBlock, buf + targetDiffLow, BLOCK_SIZE - targetDiffLow);
+            } else if (i == blocksToWrite){
+                LOG("writing last block");
+                memcpy(textBlock, buf + (BLOCK_SIZE * i) - targetDiffHigh, BLOCK_SIZE - targetDiffHigh);
+            } else {
+                memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+            }
+            LOGF("textBlock: %s\n",textBlock);
+            bd->write(FIRST_DATA_ADDRESS + adress, textBlock);
+            adress =fmgr->readFat(bd,adress); 
         }
 
     } else if (oldUsedBlockCount < newUsedBlockCount) {
