@@ -353,14 +353,14 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
 
     int currentFatEntry = offset / BLOCK_SIZE; // Starts to write here
     LOGF("Start to write in block: %i", currentFatEntry);
-    int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks to write
-    LOGF("Writes %i blocks", blockCount);
+    int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks are needed
+    LOGF("Needs %i blocks", blockCount);
 
     int currentFatAddress = inode->firstFatEntry;
     int currentLastFatAddress = inode->firstFatEntry; // -1;
 
     LOGF("FirstFatEntry before expand= %i", inode->firstFatEntry);
-    int usedBlockCountAfterWrite = currentFatEntry + blockCount;
+    int usedBlockCountAfterWrite = blockCount;
     if (usedBlockCountAfterWrite > inode->usedBlocksCount) { // Expand FAT if needed
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
             if (currentFatAddress != -1) {
@@ -395,7 +395,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     currentFatAddress = inode->firstFatEntry;
     LOGF("currentFatEntry: %u", currentFatEntry);
     int currentBlockCount = 1;
-    for (int i = 0; i < offset - BLOCK_SIZE; i = i + BLOCK_SIZE) {
+    for (int i = 0; i <= offset - BLOCK_SIZE; i = i + BLOCK_SIZE) {
         LOGF("read Fat: %u", i);
         currentFatAddress = fmgr->readFat(bd, currentFatAddress);
         currentBlockCount++;
@@ -407,7 +407,8 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     int writeSize = 0;
     int restSize = size;
     LOGF("Buffer: %s", buf);
-    for (int i = 0; i < blockCount; i++) {
+    int i = 0;
+    while (restSize > 0) {
         if (currentBlockCount <= inode->usedBlocksCount) {
             currentBlockCount++;
             textBlock = (char*)calloc(1, BLOCK_SIZE);
@@ -417,7 +418,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 LOG("bd-read successfull");
             }
             LOGF("after bd-read \n i = %i", i);
-            if (offset > 0) { // Dranhaengen
+           // if (offset > 0) { // Dranhaengen
                 if (firstBlockToWrite) {
                     textBlockOffset = offset % BLOCK_SIZE;
                     bufOffset = 0;
@@ -435,14 +436,14 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
                 restSize = restSize - writeSize;
                 firstBlockToWrite = false;
-            } else { // Ueberschreiben
+           /* } else { // Ueberschreiben
                 LOG("CASE 3: Ueberschreiben");
                 if (i == blockCount - 1) {
                     memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
                 } else { // Ganzer Block
                     memcpy(textBlock, buf + (BLOCK_SIZE * i), BLOCK_SIZE);
                 }
-            }
+            }*/
            
             LOGF("after memcpy textBlock = %s", textBlock);
             bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
@@ -450,6 +451,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             // LOGF("## Read blockcount: %u", i);
             currentFatAddress = fmgr->readFat(bd, currentFatAddress);
             free(textBlock);
+            i++;
         }
     }
 
