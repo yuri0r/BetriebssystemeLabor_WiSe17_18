@@ -20,8 +20,9 @@ class FatManager{
         int readFat(BlockDevice* bd, int position);
         int expand(BlockDevice* bd, int currentLastFatAddress);
         int readAndClearEntry(BlockDevice* bd, int entry);
-    private:
         int getFreeEntry(BlockDevice* bd);
+    private:
+        
 };
 
 #endif

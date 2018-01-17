@@ -5,7 +5,6 @@
 //  Created by Oliver Waldhorst on 07.09.17.
 //  Copyright © 2017 Oliver Waldhorst. All rights reserved.
 //
-
 #include "myfs.h"
 #include "blockdevice.h"
 #include "macros.h"
@@ -20,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
 using namespace fsConfig;
 
 BlockDevice *bd = new BlockDevice(BLOCK_SIZE);
@@ -28,6 +28,9 @@ InodeManager *imgr = new InodeManager();
 FatManager *fmgr = new FatManager();
 RootManager *rmgr = new RootManager();
 
+/**
+ * extracts filenames 
+**/
 char *formatFileName(char *input)
 {
     int count = 0;

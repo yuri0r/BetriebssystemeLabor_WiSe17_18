@@ -134,19 +134,20 @@ int MyFS::fuseReadlink(const char *path, char *link, size_t size) {
 }
 
 int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
-    LOGF("# Create File %s", path);
     LOGM();
-
+    LOGF("# Create File %s", path);
+    
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = getValidInode(path);
+    int firstFatEntry = fmgr->getFreeEntry(bd);
 
     if (inode == NULL) {
         for (int index = 0; index < MAX_FILES; index++) {
             if (!rmgr->isValid(bd, index)) {
                 LOG("Create inode");
                 path++;
-                imgr->createInode(bd, index, (char*)path, 0, 0,  time(0), time(0),
-                            time(0), -1, getuid(), getgid(), mode);
+                imgr->createInode(bd, index, (char*)path, 0, 1,  time(0), time(0),
+                            time(0), firstFatEntry, getuid(), getgid(), mode);
 
                 LOG("Set inode active in root block");
                 rmgr->setInode(bd, index, true);
@@ -326,11 +327,11 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    LOGF("\n# Trying to write %s, Offset: %u, Size: %u", path, offset, size);
     LOGM();
+    LOGF("\n# Trying to write %s, Offset: %u, Size: %u", path, offset, size);
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    inode = getValidInode(path); 
+    inode = getValidInode(path);
 
     if (inode == NULL) {
         LOG("# File not found");
@@ -338,27 +339,46 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         return ENOENT;
     }
 
-    int oldUsedBlockCount = inode->usedBlocksCount;
-
-    LOGF("# Size to write = %u", size);
-    int sizeCiel = 0;
-    if (size % BLOCK_SIZE == 0) {
-        sizeCiel = size;
-    } else {
-        sizeCiel = ((size / BLOCK_SIZE) + 1) * BLOCK_SIZE;
-    }
-    LOGF("# SizeCiel to write = %u", sizeCiel);
-
     char *textBlock = (char*)malloc(BLOCK_SIZE);
-
+    int targetDiffLow = offset % BLOCK_SIZE; // how far the offset pushes beyond block steps
+    int targetDiffHigh = BLOCK_SIZE - ((offset + size) % BLOCK_SIZE) - 1; // how much is missing to last full block step
+    int oldUsedBlockCount = inode->usedBlocksCount;
+    int newUsedBlockCount = (offset + size + targetDiffHigh) / BLOCK_SIZE; 
     int currentFatEntry = offset / BLOCK_SIZE; // Starts to write here
-    LOGF("Start to write in block: %i", currentFatEntry);
-    int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks to write
-    LOGF("Writes %i blocks", blockCount);
 
+    /*
+    possible cases:
+        1)file size unchanged
+        2)file grows
+            2.1)end
+            2.1) somewhere
+        3)file schrinks
+    */
+    
+    LOGF("%u, %u", oldUsedBlockCount , newUsedBlockCount);
+    if (oldUsedBlockCount == newUsedBlockCount) {
+        LOG("file needs same amount of blocks");
+        for (int i = 0; i < newUsedBlockCount; i++){
+
+        }
+
+    } else if (oldUsedBlockCount < newUsedBlockCount) {
+        LOG("file needs more Blocks");
+    } else {
+        LOG("file needs less Blocks");
+    }
+    //set fat entries
+    LOG("setting new fat entries");
+
+
+    //write data
+
+    //update Inode
+    /*
     int currentFatAddress = inode->firstFatEntry;
     int currentLastFatAddress = -1;
-
+    
+    
     LOGF("FirstFatEntry before expand= %i", inode->firstFatEntry);
     int usedBlockCountAfterWrite = currentFatEntry + blockCount;
     if (usedBlockCountAfterWrite > inode->usedBlocksCount) { // Expand FAT if needed
@@ -439,6 +459,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     }
 
     LOGF("# Write to %s successfull", path);
+    */
     free(inode);
     return size;
 }
@@ -536,7 +557,7 @@ int MyFS::fuseInit(struct fuse_conn_info *conn) {
     LOG("Starting logging...\n");
     LOGM();
         
-    // you can get the containfer file name here:
+    // you can get the container file name here:
     LOGF("Container file name: %s", ((MyFsInfo *) fuse_get_context()->private_data)->contFile);
     
     // TODO : Enter your code here!
@@ -559,7 +580,3 @@ int MyFS::fuseCreate(const char *path, mode_t mode, struct fuse_file_info *fileI
 void MyFS::fuseDestroy() {
     LOGM();
 }
-
-
-
-
