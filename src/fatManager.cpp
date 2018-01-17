@@ -57,7 +57,7 @@ int FatManager::expand(BlockDevice* bd, int currentLastFatAddress) {
 }
 
 int FatManager::getFreeEntry(BlockDevice* bd) {
-    for (int position = 0; position < FAT_SIZE; position++) {
+    for (int position = 0; position < (FAT_SIZE * ADDRESS_COUNT_PER_FAT_BLOCK); position++) {
         int nextEntry = readFat(bd, position);
 
         if (nextEntry == 0) {
