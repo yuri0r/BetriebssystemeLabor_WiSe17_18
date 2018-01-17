@@ -302,7 +302,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
             textBlock = (char*)calloc(1, BLOCK_SIZE);
             LOGF("# Read address %u, Fat address %u", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
             bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-            // LOGF("## Read blockcount: %u", i);
+            LOGF("# Read textblock: %s", textBlock);
             memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
             currentFatAddress = fmgr->readFat(bd, currentFatAddress);
             free(textBlock);
@@ -326,7 +326,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
 }
 
 int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
-    LOGF("\n# Trying to write %s, %u, %u", path, offset, size);
+    LOGF("\n# Trying to write %s, Offset: %u, Size: %u", path, offset, size);
     LOGM();
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
@@ -414,15 +414,19 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             LOGF("after bd-read \n i = %i", i);
             if (offset > BLOCK_SIZE * i) {
                 if ((size % BLOCK_SIZE) + (offset - (BLOCK_SIZE * i)) > BLOCK_SIZE) {
-                    LOG("CASE 1");
+                    LOG("CASE 1: Dranhaengen");
                     memcpy(textBlock + (offset - (BLOCK_SIZE * i)), buf + (BLOCK_SIZE * i), BLOCK_SIZE - (offset - (BLOCK_SIZE * i)));
                 } else {
                     LOG("CASE 2");
                     memcpy(textBlock + (offset - (BLOCK_SIZE * i)), buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
                 } 
             } else {
-                LOG("CASE 3");
-                memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+                LOG("CASE 3: Ueberschreiben");
+                if (i == blockCount - 1) {
+                    memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
+                } else { // Ganzer Block
+                    memcpy(textBlock, buf + (BLOCK_SIZE * i), BLOCK_SIZE);
+                }
             }
            
             LOGF("after memcpy textBlock = %s", textBlock);
