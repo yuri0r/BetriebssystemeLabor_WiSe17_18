@@ -444,11 +444,9 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         }
 
         // If needed copy data from BlockDevice to textBlock
-        if (currentBlockCount <= oldUsedBlockCount) {
+        if (firstBlockToWrite && currentBlockCount <= oldUsedBlockCount) {
             bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
             LOG("bd-read successfull");
-        } else {
-            LOG("didnt need to read old block");
         }
 
         // Copy right part of Buffer to TextBlock
