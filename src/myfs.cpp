@@ -346,27 +346,27 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
 
     // Get FileSize rounded in 512 steps
     LOGF("# Size to write = %u", size);
-    int sizeCiel = 0;
+    int roundedSize = 0;
     if ((size + offset) % BLOCK_SIZE == 0) {
-        sizeCiel = size + offset;
+        roundedSize = size + offset;
     } else {
-        sizeCiel = (((size + offset)/ BLOCK_SIZE) + 1) * BLOCK_SIZE;
+        roundedSize = (((size + offset)/ BLOCK_SIZE) + 1) * BLOCK_SIZE;
     }
-    LOGF("# FileSize = %u", sizeCiel);
+    LOGF("# FileSize = %u", roundedSize);
 
     // Init more Paramas
     int currentFatEntry = offset / BLOCK_SIZE; // Start to write at this Fat entry
     LOGF("Start to write in block: %i", currentFatEntry);
-    int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks are needed
+    int blockCount = roundedSize / BLOCK_SIZE; // How many blocks are needed
     LOGF("Needs %i blocks", blockCount);
 
     int currentFatAddress = inode->firstFatEntry;
-    int currentLastFatAddress = inode->firstFatEntry;
+    int currentLastFatAddress = currentFatAddress;
 
     // Expand Fat if needed
     LOGF("FirstFatEntry before expand= %i", currentFatAddress);
     int usedBlockCountAfterWrite = blockCount;
-    if (usedBlockCountAfterWrite > oldUsedBlockCount) {
+    if (usedBlockCountAfterWrite >= oldUsedBlockCount) {
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
             if (currentFatAddress != -1) {
                 LOGF("CurrentFatAddress: %i", currentFatAddress);
@@ -390,6 +390,12 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         inode->usedBlocksCount = usedBlockCountAfterWrite;
         LOGF("New usedBlockCount = %u", inode->usedBlocksCount);
         LOGF("FirstFatEntry after expand = %i", inode->firstFatEntry);
+    } else {
+        LOG("fat has to be shortend");
+        while(currentFatAddress != -1)
+        {
+            currentFatAddress = fmgr->readFat(bd,currentFatAddress);
+        }
     } // End of: Expand Fat if needed
     
     // Update file Size
