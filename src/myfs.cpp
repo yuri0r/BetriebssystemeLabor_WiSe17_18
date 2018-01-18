@@ -316,6 +316,13 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
 
     memcpy( buf, finalText + (offset % BLOCK_SIZE), size - (cantReadBlockCount * BLOCK_SIZE));
     LOGF("Buffer: %s", buf);
+
+    // Update write time 
+    inode->atime = time(0);
+
+    // Safe Inode changes 
+    imgr->updateInode(bd, inode);
+
     free(inode);
     free(finalText);
     if (enxio) {
@@ -397,6 +404,10 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             inode->fileSize = size + offset;
     }
     LOGF("New fileSize = %u", inode->fileSize);
+
+    // Update write time 
+    inode->ctime = time(0);
+    inode->mtime = time(0);
 
     // Safe Inode changes 
     imgr->updateInode(bd, inode);
