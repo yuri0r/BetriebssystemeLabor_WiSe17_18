@@ -423,48 +423,58 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     int bufOffset = 0;
     int writeSize = 0;
     int restSize = size;
-    int i = 0;
 
     // Print complete data which to write
     LOGF("Buffer: %s", buf);
 
     // Start to write
-    while (restSize > 0) { // Still data to write
-        if (currentBlockCount <= inode->usedBlocksCount) {
-            currentBlockCount++;
-            textBlock = (char*)calloc(1, BLOCK_SIZE);
-            LOGF("# Write address %i, Fat address %i", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
-            if (currentBlockCount <= oldUsedBlockCount + 1) {
-                bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-                LOG("bd-read successfull");
-            }
-            LOGF("after bd-read \n i = %i", i);
-            if (firstBlockToWrite) {
-                textBlockOffset = offset % BLOCK_SIZE;
-                bufOffset = 0;
-            } else {
-                textBlockOffset = 0;
-                bufOffset = bufOffset + writeSize;
-            }
-            if (restSize + textBlockOffset > BLOCK_SIZE) {
-                writeSize = BLOCK_SIZE - textBlockOffset;
-            } else {
-                writeSize = restSize;
-            }
-            LOGF("CurrentBlockCount: %i", currentBlockCount);
-            LOGF("textBlockOffset: %i, bufOffset: %i, writeSize: %i", textBlockOffset, bufOffset, writeSize);
-            memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
-            restSize = restSize - writeSize;
-            firstBlockToWrite = false;
-           
-            LOGF("after memcpy textBlock = %s", textBlock);
-            bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-            LOG("after bd-write");
-            // LOGF("## Read blockcount: %u", i);
-            currentFatAddress = fmgr->readFat(bd, currentFatAddress);
-            free(textBlock);
-            i++;
+    while (restSize > 0) { // Still data to write 
+        LOGF("# Write address %i, Fat address %i", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
+
+        // Set params for this loop
+        textBlock = (char*)calloc(1, BLOCK_SIZE);
+
+        if (firstBlockToWrite) { // First time in this loop
+            textBlockOffset = offset % BLOCK_SIZE;
+            bufOffset = 0;
+        } else { // Not first time in this loop
+            textBlockOffset = 0;
+            bufOffset = bufOffset + writeSize;
         }
+
+        // How much data to write in this loop
+        if (restSize + textBlockOffset > BLOCK_SIZE) {
+            writeSize = BLOCK_SIZE - textBlockOffset;
+        } else {
+            writeSize = restSize;
+        }
+
+        // If needed copy data from BlockDevice to textBlock
+        if (currentBlockCount <= oldUsedBlockCount) {
+            bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+            LOG("bd-read successfull");
+        } else {
+            LOG("didnt need to read old block");
+        }
+
+        // Copy right part of Buffer to TextBlock
+        LOGF("CurrentBlockCount: %i", currentBlockCount);
+        LOGF("textBlockOffset: %i, bufOffset: %i, writeSize: %i", textBlockOffset, bufOffset, writeSize);
+        memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
+        
+        // Write textBlock to BlockDevice
+        LOGF("after memcpy textBlock = %s", textBlock);
+        bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+        LOG("after bd-write");
+
+        // Get next Fat Address to write
+        currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+
+        // Set params for next loop
+        free(textBlock);
+        restSize = restSize - writeSize;
+        firstBlockToWrite = false;
+        currentBlockCount++;
     }
 
     LOGF("# Write to %s successfull", path);
