@@ -329,17 +329,22 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     LOGF("\n# Trying to write %s, Offset: %u, Size: %u", path, offset, size);
     LOGM();
 
+    // Get inode of file to write
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     inode = getValidInode(path); 
 
+    // If inode doesnt exist = File does not exist
     if (inode == NULL) {
         LOG("# File not found");
         free(inode);
         return ENOENT;
     }
 
-    int oldUsedBlockCount = inode->usedBlocksCount;
+    // Init Params
+    int oldUsedBlockCount = inode->usedBlocksCount; // File Blockcount before write
+    char *textBlock = (char*)malloc(BLOCK_SIZE); // Buffer for one dataBlock
 
+    // Get FileSize rounded in 512 steps
     LOGF("# Size to write = %u", size);
     int sizeCiel = 0;
     if ((size + offset) % BLOCK_SIZE == 0) {
@@ -349,19 +354,19 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     }
     LOGF("# FileSize = %u", sizeCiel);
 
-    char *textBlock = (char*)malloc(BLOCK_SIZE);
-
-    int currentFatEntry = offset / BLOCK_SIZE; // Starts to write here
+    // Init more Paramas
+    int currentFatEntry = offset / BLOCK_SIZE; // Start to write at this Fat entry
     LOGF("Start to write in block: %i", currentFatEntry);
     int blockCount = sizeCiel / BLOCK_SIZE; // How many blocks are needed
     LOGF("Needs %i blocks", blockCount);
 
     int currentFatAddress = inode->firstFatEntry;
-    int currentLastFatAddress = inode->firstFatEntry; // -1;
+    int currentLastFatAddress = inode->firstFatEntry;
 
-    LOGF("FirstFatEntry before expand= %i", inode->firstFatEntry);
+    // Expand Fat if needed
+    LOGF("FirstFatEntry before expand= %i", currentFatAddress);
     int usedBlockCountAfterWrite = blockCount;
-    if (usedBlockCountAfterWrite > inode->usedBlocksCount) { // Expand FAT if needed
+    if (usedBlockCountAfterWrite > oldUsedBlockCount) {
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
             if (currentFatAddress != -1) {
                 LOGF("CurrentFatAddress: %i", currentFatAddress);
@@ -385,13 +390,18 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         inode->usedBlocksCount = usedBlockCountAfterWrite;
         LOGF("New usedBlockCount = %u", inode->usedBlocksCount);
         LOGF("FirstFatEntry after expand = %i", inode->firstFatEntry);
-    }
+    } // End of: Expand Fat if needed
+    
+    // Update file Size
     if (inode->fileSize < size + offset) {
             inode->fileSize = size + offset;
     }
     LOGF("New fileSize = %u", inode->fileSize);
+
+    // Safe Inode changes 
     imgr->updateInode(bd, inode);
 
+    // Get first Address to write
     currentFatAddress = inode->firstFatEntry;
     LOGF("currentFatEntry: %u", currentFatEntry);
     int currentBlockCount = 1;
@@ -401,14 +411,19 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         currentBlockCount++;
     }
     
+    // Init write params
     int textBlockOffset = 0;
     bool firstBlockToWrite = true;
     int bufOffset = 0;
     int writeSize = 0;
     int restSize = size;
-    LOGF("Buffer: %s", buf);
     int i = 0;
-    while (restSize > 0) {
+
+    // Print complete data which to write
+    LOGF("Buffer: %s", buf);
+
+    // Start to write
+    while (restSize > 0) { // Still data to write
         if (currentBlockCount <= inode->usedBlocksCount) {
             currentBlockCount++;
             textBlock = (char*)calloc(1, BLOCK_SIZE);
@@ -418,32 +433,23 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 LOG("bd-read successfull");
             }
             LOGF("after bd-read \n i = %i", i);
-           // if (offset > 0) { // Dranhaengen
-                if (firstBlockToWrite) {
-                    textBlockOffset = offset % BLOCK_SIZE;
-                    bufOffset = 0;
-                } else {
-                    textBlockOffset = 0;
-                    bufOffset = bufOffset + writeSize;
-                }
-                if (restSize + textBlockOffset > BLOCK_SIZE) {
-                    writeSize = BLOCK_SIZE - textBlockOffset;
-                } else {
-                    writeSize = restSize;
-                }
-                LOGF("CurrentBlockCount: %i", currentBlockCount);
-                LOGF("textBlockOffset: %i, bufOffset: %i, writeSize: %i", textBlockOffset, bufOffset, writeSize);
-                memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
-                restSize = restSize - writeSize;
-                firstBlockToWrite = false;
-           /* } else { // Ueberschreiben
-                LOG("CASE 3: Ueberschreiben");
-                if (i == blockCount - 1) {
-                    memcpy(textBlock, buf + (BLOCK_SIZE * i), size % BLOCK_SIZE);
-                } else { // Ganzer Block
-                    memcpy(textBlock, buf + (BLOCK_SIZE * i), BLOCK_SIZE);
-                }
-            }*/
+            if (firstBlockToWrite) {
+                textBlockOffset = offset % BLOCK_SIZE;
+                bufOffset = 0;
+            } else {
+                textBlockOffset = 0;
+                bufOffset = bufOffset + writeSize;
+            }
+            if (restSize + textBlockOffset > BLOCK_SIZE) {
+                writeSize = BLOCK_SIZE - textBlockOffset;
+            } else {
+                writeSize = restSize;
+            }
+            LOGF("CurrentBlockCount: %i", currentBlockCount);
+            LOGF("textBlockOffset: %i, bufOffset: %i, writeSize: %i", textBlockOffset, bufOffset, writeSize);
+            memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
+            restSize = restSize - writeSize;
+            firstBlockToWrite = false;
            
             LOGF("after memcpy textBlock = %s", textBlock);
             bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
@@ -472,7 +478,6 @@ int MyFS::fuseFlush(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
-    // TODO do we need it?
     return 0;
 }
 
@@ -503,7 +508,6 @@ int MyFS::fuseRemovexattr(const char *path, const char *name) {
 
 int MyFS::fuseOpendir(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
-    // TODO do we need it?
     return 0;
 }
 
