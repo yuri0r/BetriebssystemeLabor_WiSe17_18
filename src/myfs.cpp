@@ -372,9 +372,10 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     int fatPointer = currentFatAddress;
 
     // Expand Fat if needed
-    LOGF("FirstFatEntry before expand= %i", currentFatAddress);
+    
     int usedBlockCountAfterWrite = blockCount;
     if (usedBlockCountAfterWrite >= oldUsedBlockCount) {
+        LOGF("FirstFatEntry before expand= %i", currentFatAddress);
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
             if (currentFatAddress != -1) {
                 LOGF("CurrentFatAddress: %i", currentFatAddress);
@@ -403,14 +404,14 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         LOG("same amount of fatblocks needed");
     } else {
         LOG("fat has to be shortend");
-        for (int blocks = 0; blocks < usedBlockCountAfterWrite; blocks ++) {
+        for (int blocks = 0; blocks < usedBlockCountAfterWrite; blocks ++) {//for some reason crashes
             LOGF("jumped over fat entry %s",fatPointer);
             fatPointer = fmgr->readFat(bd,fatPointer);
         }
         fmgr->markEoF(bd,fatPointer);
         fatPointer = fmgr->readFat(bd,fatPointer);
 
-        for(int blocks = 0; blocks < usedBlockCountAfterWrite; blocks++){
+        for(int blocks = usedBlockCountAfterWrite; blocks < oldUsedBlockCount; blocks++){
             LOGF("cleared fat entry %s",fatPointer);
             fmgr->readAndClearEntry(bd,fatPointer);
         }
