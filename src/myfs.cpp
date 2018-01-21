@@ -30,6 +30,7 @@ SuperBlockManager *sbmgr = new SuperBlockManager();
 InodeManager *imgr = new InodeManager();
 FatManager *fmgr = new FatManager();
 RootManager *rmgr = new RootManager();
+int openFiles = 0;
 
 #define RETURN_ERRNO(x) (x) == 0 ? 0 : -errno
 
@@ -239,9 +240,15 @@ int MyFS::fuseUtime(const char *path, struct utimbuf *ubuf) {
 }
 
 int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
-    //TODO
     LOGM();
-    return 0;
+    if (openFiles < MAX_FILES) {
+        openFiles++;
+        LOGF("Open files: %i", openFiles);
+        return 0;
+    } else {
+        LOG("Cant open this file! %i files already open!");
+        return -ENFILE;
+    }
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
@@ -516,7 +523,14 @@ int MyFS::fuseFlush(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
-    return 0;
+    if (openFiles > 0) {
+        openFiles--;
+        LOGF("Open files: %i", openFiles);
+        return 0;
+    } else {
+        LOG("Cant close more files! All files already closed!");
+        return 0;
+    }
 }
 
 int MyFS::fuseFsync(const char *path, int datasync, struct fuse_file_info *fi) {
