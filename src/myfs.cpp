@@ -94,8 +94,8 @@ MyFS::~MyFS() {
 }
 
 int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
-    LOGF("\n# Try to get attributs from: %s", path);
-    LOGM();
+    //LOGF("\n# Try to get attributs from: %s", path);
+    //LOGM();
 
     if ( strcmp( path, "/" ) == 0 )
 	{
@@ -117,10 +117,10 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_ctime = inode->ctime;
             statbuf->st_mtime = inode->mtime;
             statbuf->st_mode = inode->mode;
-            LOGF("# FirstFatEntry: %i", inode->firstFatEntry);
-            LOG("# Get atrributs went successfull");
+            //LOGF("# FirstFatEntry: %i", inode->firstFatEntry);
+            //LOG("# Get atrributs went successfull");
         } else {
-            LOG("# File does not exist!");
+            //LOG("# File does not exist!");
             return -ENOENT;
         }
         statbuf->st_nlink = 1;
@@ -362,6 +362,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
 
     int currentFatAddress = inode->firstFatEntry;
     int currentLastFatAddress = currentFatAddress;
+    int fatPointer = currentFatAddress;
 
     // Expand Fat if needed
     LOGF("FirstFatEntry before expand= %i", currentFatAddress);
@@ -391,25 +392,25 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         LOGF("New usedBlockCount = %u", inode->usedBlocksCount);
         LOGF("FirstFatEntry after expand = %i", inode->firstFatEntry);
         // End of: Expand Fat if needed
+    } else if (usedBlockCountAfterWrite == oldUsedBlockCount){
+        LOG("same amount of fatblocks needed");
     } else {
         LOG("fat has to be shortend");
         for (int blocks = 0; blocks < usedBlockCountAfterWrite; blocks ++) {
-            LOGF("jumped over fat entry %s",currentFatAddress);
-            currentFatAddress = fmgr->readFat(bd,currentFatAddress);
+            LOGF("jumped over fat entry %s",fatPointer);
+            fatPointer = fmgr->readFat(bd,fatPointer);
         }
-        fmgr->markEoF(bd,currentFatAddress);
-        currentFatAddress = fmgr->readFat(bd,currentFatAddress);
+        fmgr->markEoF(bd,fatPointer);
+        fatPointer = fmgr->readFat(bd,fatPointer);
 
         for(int blocks = 0; blocks < usedBlockCountAfterWrite; blocks++){
-            LOGF("cleared fat entry %s",currentFatAddress);
-            fmgr->readAndClearEntry(bd,currentFatAddress);
+            LOGF("cleared fat entry %s",fatPointer);
+            fmgr->readAndClearEntry(bd,fatPointer);
         }
     } 
     
     // Update file Size
-    if (inode->fileSize < size + offset) {
-            inode->fileSize = size + offset;
-    }
+    inode->fileSize = size + offset;
     LOGF("New fileSize = %u", inode->fileSize);
 
     // Safe Inode changes 
