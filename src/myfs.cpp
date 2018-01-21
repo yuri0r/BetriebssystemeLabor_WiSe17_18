@@ -158,11 +158,11 @@ int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
         }
         LOG("# ENOSPC (No free inode)");
         free (inode);
-        return ENOSPC;
+        return -ENOSPC;
     } else {
         LOG("# EEXIST (File with same name exists already)");
         free (inode);
-        return EEXIST;
+        return -EEXIST;
     }
 }
 
@@ -302,7 +302,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
             textBlock = (char*)calloc(1, BLOCK_SIZE);
             LOGF("# Read address %u, Fat address %u", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
             bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-            LOGF("# Read textblock: %s", textBlock);
+           // LOGF("# Read textblock: %s", textBlock);
             memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
             currentFatAddress = fmgr->readFat(bd, currentFatAddress);
             free(textBlock);
@@ -315,7 +315,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     LOG("# Finished read process");
 
     memcpy( buf, finalText + (offset % BLOCK_SIZE), size - (cantReadBlockCount * BLOCK_SIZE));
-    LOGF("Buffer: %s", buf);
+   // LOGF("Buffer: %s", buf);
 
     // Update write time 
     inode->atime = time(0);
@@ -374,7 +374,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     // Expand Fat if needed
     
     int usedBlockCountAfterWrite = blockCount;
-    if (usedBlockCountAfterWrite >= oldUsedBlockCount) {
+    if (usedBlockCountAfterWrite > oldUsedBlockCount) {
         LOGF("FirstFatEntry before expand= %i", currentFatAddress);
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
             if (currentFatAddress != -1) {
@@ -404,17 +404,19 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         LOG("same amount of fatblocks needed");
     } else {
         LOG("fat has to be shortend");
-        for (int blocks = 0; blocks < usedBlockCountAfterWrite; blocks ++) {//for some reason crashes
-            LOGF("jumped over fat entry %s",fatPointer);
+        for (int blocks = 0; blocks < usedBlockCountAfterWrite - 1; blocks ++) {
+            LOGF("jumped over fat entry %i",fatPointer);
             fatPointer = fmgr->readFat(bd,fatPointer);
         }
-        fmgr->markEoF(bd,fatPointer);
-        fatPointer = fmgr->readFat(bd,fatPointer);
-
-        for(int blocks = usedBlockCountAfterWrite; blocks < oldUsedBlockCount; blocks++){
-            LOGF("cleared fat entry %s",fatPointer);
-            fmgr->readAndClearEntry(bd,fatPointer);
+       // fatPointer = fmgr->readFat(bd,fatPointer);
+        fatPointer = fmgr->readAndMarkEoF(bd,fatPointer);
+        LOGF("FatPointer: %i", fatPointer);
+        LOGF("Blocks: %i, oldUsedBlockCount: %i", usedBlockCountAfterWrite, oldUsedBlockCount);
+        while (fatPointer != -1) {
+            LOGF("cleared fat entry %i",fatPointer);
+            fatPointer = fmgr->readAndClearEntry(bd, fatPointer);
         }
+        LOG("End of shorten");
     } 
     
     // Update file Size
@@ -447,7 +449,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     int i = 0;
 
     // Print complete data which to write
-    LOGF("Buffer: %s", buf);
+    //LOGF("Buffer: %s", buf);
 
     // Start to write
     while (restSize > 0) { // Still data to write 
@@ -483,7 +485,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
         
         // Write textBlock to BlockDevice
-        LOGF("after memcpy textBlock = %s", textBlock);
+       // LOGF("after memcpy textBlock = %s", textBlock);
         bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
         LOG("after bd-write");
 

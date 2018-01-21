@@ -125,7 +125,7 @@ void dataCreation(int argc, char *argv[])
         }
         else
         {
-            std::cout << "File: " << argv[i] << "\nname allready in use! \n"
+            std::cout << "File: " << argv[i] << "\nname already in use! \n"
                       << std::endl;
         }
     }
