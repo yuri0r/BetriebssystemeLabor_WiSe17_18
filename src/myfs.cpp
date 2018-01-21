@@ -475,6 +475,25 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
             LOG("bd-read successfull");
         }
+
+        // Copy right part of Buffer to TextBlock
+        LOGF("CurrentBlockCount: %i", currentBlockCount);
+        LOGF("textBlockOffset: %i, bufOffset: %i, writeSize: %i", textBlockOffset, bufOffset, writeSize);
+        memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
+        
+        // Write textBlock to BlockDevice
+        LOGF("after memcpy textBlock = %s", textBlock);
+        bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
+        LOG("after bd-write");
+
+        // Get next Fat Address to write
+        currentFatAddress = fmgr->readFat(bd, currentFatAddress);
+
+        // Set params for next loop
+        free(textBlock);
+        restSize = restSize - writeSize;
+        firstBlockToWrite = false;
+        currentBlockCount++;
     }
 
     LOGF("# Write to %s successfull", path);
