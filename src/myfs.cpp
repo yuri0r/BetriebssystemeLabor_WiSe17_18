@@ -180,9 +180,9 @@ int MyFS::fuseUnlink(const char *path) {
     if (inode != NULL) {
         int currentFatAddress = inode->firstFatEntry;
         
-        do {
+        while (currentFatAddress != -1) {
             currentFatAddress = fmgr->readAndClearEntry(bd, currentFatAddress);
-        } while (currentFatAddress != -1);
+        }
        
         for (int i = 0; i < MAX_FILES; i++) {
             if (rmgr->isValid(bd, i)) {
