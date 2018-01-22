@@ -405,15 +405,16 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     } else {
         LOG("fat has to be shortend");
         for (int blocks = 0; blocks < usedBlockCountAfterWrite; blocks ++) {//for some reason crashes
-            LOGF("jumped over fat entry %s",fatPointer);
+            LOGF("jumped over fat entry %u",fatPointer);
             fatPointer = fmgr->readFat(bd,fatPointer);
         }
-        fmgr->markEoF(bd,fatPointer);
+        int endPointer = fatPointer;
         fatPointer = fmgr->readFat(bd,fatPointer);
+        fmgr->markEoF(bd,endPointer);
 
         for(int blocks = usedBlockCountAfterWrite; blocks < oldUsedBlockCount; blocks++){
-            LOGF("cleared fat entry %s",fatPointer);
-            fmgr->readAndClearEntry(bd,fatPointer);
+            LOGF("cleared fat entry %u",fatPointer);
+            fatPointer= fmgr->readAndClearEntry(bd,fatPointer);
         }
     } 
     
@@ -616,7 +617,3 @@ int MyFS::fuseCreate(const char *path, mode_t mode, struct fuse_file_info *fileI
 void MyFS::fuseDestroy() {
     LOGM();
 }
-
-
-
-
