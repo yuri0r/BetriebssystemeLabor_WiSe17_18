@@ -397,6 +397,10 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 LOGF("Try to expand, currentLastFatAddress: %i", currentLastFatAddress);
                 currentLastFatAddress = fmgr->expand(bd, currentLastFatAddress);
                 LOGF("CurrentLastAddress after expand: %i", currentLastFatAddress);
+                if (currentLastFatAddress == -1) {
+                    LOG("!!! NO FREE FAT ENTRY");
+                    return -ENOSPC;
+                }
                 if (inode->firstFatEntry == -1) {
                     inode->firstFatEntry = currentLastFatAddress;
                     LOG("Switched firstFatEntry");
