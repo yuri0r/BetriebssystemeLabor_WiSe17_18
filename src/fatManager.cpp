@@ -68,23 +68,7 @@ int FatManager::getFreeEntry(BlockDevice* bd) {
     return -1;
 }
 
-void FatManager::markEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != FatAddress
-
-    int fatBlock = entry / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys
-    int blockOffset = entry % ADDRESS_COUNT_PER_FAT_BLOCK; //which of the entries in a block
-
-    if (fatBlock != bufferBlockIndex) {
-        bd->read(FIRST_FAT_ADDRESS + fatBlock, (char *)fbBuffer);
-        bufferBlockIndex = fatBlock;
-    }
-
-    //std::cout << "EoF FatEntry: " << (fatBlock * ADDRESS_COUNT_PER_FAT_BLOCK) + blockOffset << std::endl; 
-    fbBuffer->destination[blockOffset] = -1; //checking for > 0 is fast  
-
-    bd->write(FIRST_FAT_ADDRESS + fatBlock, (char *)fbBuffer);
-}
-
-int FatManager::readAndMarkEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != FatAddress
+int FatManager::markEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != FatAddress
 
     int fatBlock = entry / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys
     int blockOffset = entry % ADDRESS_COUNT_PER_FAT_BLOCK; //which of the entries in a block

@@ -385,7 +385,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
             fatPointer = fmgr->readFat(bd,fatPointer);
         }
        // fatPointer = fmgr->readFat(bd,fatPointer);
-        fatPointer = fmgr->readAndMarkEoF(bd,fatPointer);
+        fatPointer = fmgr->markEoF(bd,fatPointer);
         LOGF("FatPointer: %i", fatPointer);
         LOGF("Blocks: %i, oldUsedBlockCount: %i", usedBlockCountAfterWrite, oldUsedBlockCount);
         while (fatPointer != -1) {
