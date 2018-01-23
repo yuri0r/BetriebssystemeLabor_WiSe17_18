@@ -1,0 +1,38 @@
+#!/bin/bash
+#use inside git repo
+#make sure that old fusemountpoint is unmounted (fusermount -u)
+mountPoint=point
+containerFile=container.bin
+inputFiles=Test*
+copyFiles=README.md
+log=log.txt
+
+echo "Script executed from: ${PWD}"
+fusermount -u $mountPoint
+rm -r $containerFile $mountPoint/ $log
+mkdir $mountPoint/
+touch $log
+echo
+make -B |& tail -n 1
+echo
+./mkfs.myfs $containerFile $inputFiles
+./mount.myfs $PWD/$containerFile $PWD/$log $PWD/$mountPoint -s
+cp $copyFiles $mountPoint/$copyFiles
+cd $mountPoint/
+touch hello.txt
+touch hallo.txt
+for i in `seq 1 50`	; do echo $i hallo >>hallo.txt ; done;
+for i in `seq 1 50`	; do echo $i hello >>hello.txt ; done;
+for i in `seq 51 100`	; do echo $i hello >>hello.txt ; done;
+for i in `seq 51 100`	; do echo $i hallo >>hallo.txt ; done;
+for i in `seq 100 200`	; do echo $i hallo >>hallo.txt ; done;
+for i in `seq 100 200`	; do echo $i hello >>hello.txt ; done;
+for i in `seq 201 400`	; do echo $i hello >>hello.txt ; done;
+for i in `seq 201 400`	; do echo $i hallo >>hallo.txt ; done;
+
+cd ..
+printf "\nwordcount inputfiles:\n"
+wc $inputFiles $mountPoint/$inputFiles
+
+printf "\n wordcount copyFiles:\n"
+wc $copyFiles $mountPoint/$copyFiles
