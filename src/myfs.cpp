@@ -44,41 +44,6 @@ do { fprintf(this->logFile, text "\n"); } while (0)
 do { fprintf(this->logFile, "%s:%d:%s()\n", __FILE__, \
 __LINE__, __func__); } while (0)
 
-InodeBlockStruct* getValidInode(const char *fileName) {
-    fileName++;
-    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-
-    for (int i = 0; i < MAX_FILES; i++) {
-        if (rmgr->isValid(bd, i)) {
-            inode = imgr->getInodeByIndex(bd, i); 
-            if (strcmp(inode->fileName ,fileName) == 0){
-                return inode;
-            }
-        }
-    }
-
-    free(inode);
-    return NULL;
-}
-
-InodeBlockStruct* clearValidInode(const char *fileName) {
-    fileName++;
-    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-
-    for (int i = 0; i < MAX_FILES; i++) {
-        if (rmgr->isValid(bd, i)) {
-            inode = imgr->getInodeByIndex(bd, i); 
-            if (strcmp(inode->fileName ,fileName) == 0){
-                rmgr->setInode(bd, i, false);
-                return inode;
-            }
-        }
-    }
-
-    free(inode);
-    return NULL;
-}
-
 MyFS* MyFS::Instance() {
     if(_instance == NULL) {
         _instance = new MyFS();
@@ -108,7 +73,7 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
 	}
     else
     {
-        InodeBlockStruct* inode = getValidInode(path); 
+        InodeBlockStruct* inode = imgr->getInode(bd,rmgr,path); 
         if (inode != NULL) {
             LOGF("# Get inode data from: %s", inode->fileName);
             statbuf->st_uid = inode->userID;
@@ -139,7 +104,7 @@ int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
     LOGM();
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    inode = getValidInode(path);
+    inode = imgr->getInode(bd, rmgr, path);
 
     if (inode == NULL) {
         for (int index = 0; index < MAX_FILES; index++) {
@@ -176,7 +141,7 @@ int MyFS::fuseUnlink(const char *path) {
     LOGF("\n# Try to delete file: %s", path);
     LOGM();
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    inode = clearValidInode(path); 
+    inode =  imgr->clearValidInode(bd, rmgr, path); 
 
     if (inode != NULL) {
         int currentFatAddress = inode->firstFatEntry;
@@ -256,7 +221,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     LOGM();
 
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    inode = getValidInode(path); 
+    inode = imgr->getInode(bd, rmgr ,path); 
 
     if (inode == NULL) {
         LOG("# File not found");
@@ -345,7 +310,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
 
     // Get inode of file to write
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    inode = getValidInode(path); 
+    inode = imgr->getInode(bd, rmgr, path); 
 
     // If inode doesnt exist = File does not exist
     if (inode == NULL) {

@@ -3,6 +3,7 @@
 
 #include "myfs.h"
 #include "blockdevice.h"
+#include "rootManager.h"
 #include <stdlib.h>
 
 struct InodeBlockStruct // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32 = 344 @curvel this is outdated @yuri
@@ -37,10 +38,11 @@ class InodeManager
                      unsigned int groupID,
                      unsigned int mode);
 
-    InodeBlockStruct* getInode(BlockDevice *bd, const char *fileName);
+    InodeBlockStruct* getInode(BlockDevice *bd,RootManager *rmgr, const char *fileName);
     char* getFileName(BlockDevice *bd, int index);
     InodeBlockStruct* getInodeByIndex(BlockDevice *bd, int index);
     void updateInode(BlockDevice *bd, InodeBlockStruct *inode);
+    InodeBlockStruct* clearValidInode(BlockDevice *bd, RootManager *rmgr, const char *fileName);
 };
 
 #endif

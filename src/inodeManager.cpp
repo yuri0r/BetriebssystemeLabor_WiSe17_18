@@ -1,4 +1,5 @@
 #include "inodeManager.h"
+#include "rootManager.h"
 #include "fsConfig.h"
 #include "blockdevice.h"
 #include <string.h>
@@ -49,16 +50,20 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     }
 }
 
-InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, const char *fileName)
-{
+InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, RootManager *rmgr, const char *fileName) {
     fileName++;
-    InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    for (int i = 0; i < MAX_FILES; i++ ){
-        bd->read(INODES_ADDRESS + i, (char*)node);
-        if (strcmp(node->fileName ,fileName) == 0){
-            return node;
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (rmgr->isValid(bd, i)) {
+            inode = getInodeByIndex(bd, i); 
+            if (strcmp(inode->fileName ,fileName) == 0){
+                return inode;
+            }
         }
     }
+
+    free(inode);
     return NULL;
 }
 
@@ -77,4 +82,22 @@ char* InodeManager::getFileName(BlockDevice *bd, int index){
 
 void InodeManager::updateInode(BlockDevice *bd, InodeBlockStruct *inode) {
     bd->write(INODES_ADDRESS + inode->index, (char*)inode);
+}
+
+InodeBlockStruct* InodeManager::clearValidInode(BlockDevice *bd, RootManager *rmgr, const char *fileName) {
+    fileName++;
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (rmgr->isValid(bd, i)) {
+            inode = getInodeByIndex(bd, i); 
+            if (strcmp(inode->fileName ,fileName) == 0){
+                rmgr->setInode(bd, i, false);
+                return inode;
+            }
+        }
+    }
+
+    free(inode);
+    return NULL;
 }

@@ -79,7 +79,7 @@ void FatManager::markEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != 
 
     bd->read(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
 
-    std::cout << "EoF FatEntry: " << (fatBlock * ADDRESS_COUNT_PER_FAT_BLOCK) + blockOffset << std::endl; 
+    //std::cout << "EoF FatEntry: " << (fatBlock * ADDRESS_COUNT_PER_FAT_BLOCK) + blockOffset << std::endl; 
     fb->destination[blockOffset] = -1; //checking for > 0 is fast  
 
     bd->write(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
