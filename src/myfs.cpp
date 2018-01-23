@@ -30,6 +30,7 @@ SuperBlockManager *sbmgr = new SuperBlockManager();
 InodeManager *imgr = new InodeManager();
 FatManager *fmgr = new FatManager();
 RootManager *rmgr = new RootManager();
+int openFiles = 0;
 
 #define RETURN_ERRNO(x) (x) == 0 ? 0 : -errno
 
@@ -158,11 +159,11 @@ int MyFS::fuseMknod(const char *path, mode_t mode, dev_t dev) {
         }
         LOG("# ENOSPC (No free inode)");
         free (inode);
-        return ENOSPC;
+        return -ENOSPC;
     } else {
         LOG("# EEXIST (File with same name exists already)");
         free (inode);
-        return EEXIST;
+        return -EEXIST;
     }
 }
 
@@ -180,9 +181,9 @@ int MyFS::fuseUnlink(const char *path) {
     if (inode != NULL) {
         int currentFatAddress = inode->firstFatEntry;
         
-        do {
+        while (currentFatAddress != -1) {
             currentFatAddress = fmgr->readAndClearEntry(bd, currentFatAddress);
-        } while (currentFatAddress != -1);
+        }
        
         for (int i = 0; i < MAX_FILES; i++) {
             if (rmgr->isValid(bd, i)) {
@@ -239,9 +240,15 @@ int MyFS::fuseUtime(const char *path, struct utimbuf *ubuf) {
 }
 
 int MyFS::fuseOpen(const char *path, struct fuse_file_info *fileInfo) {
-    //TODO
     LOGM();
-    return 0;
+    if (openFiles < MAX_FILES) {
+        openFiles++;
+        LOGF("Open files: %i", openFiles);
+        return 0;
+    } else {
+        LOG("Cant open this file! %i files already open!");
+        return -ENFILE;
+    }
 }
 
 int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fileInfo) {
@@ -302,7 +309,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
             textBlock = (char*)calloc(1, BLOCK_SIZE);
             LOGF("# Read address %u, Fat address %u", FIRST_DATA_ADDRESS + currentFatAddress, currentFatAddress);
             bd->read(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
-            LOGF("# Read textblock: %s", textBlock);
+           // LOGF("# Read textblock: %s", textBlock);
             memcpy(finalText + (BLOCK_SIZE * i), textBlock, BLOCK_SIZE);
             currentFatAddress = fmgr->readFat(bd, currentFatAddress);
             free(textBlock);
@@ -315,7 +322,7 @@ int MyFS::fuseRead(const char *path, char *buf, size_t size, off_t offset, struc
     LOG("# Finished read process");
 
     memcpy( buf, finalText + (offset % BLOCK_SIZE), size - (cantReadBlockCount * BLOCK_SIZE));
-    LOGF("Buffer: %s", buf);
+   // LOGF("Buffer: %s", buf);
 
     // Update write time 
     inode->atime = time(0);
@@ -374,7 +381,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     // Expand Fat if needed
     
     int usedBlockCountAfterWrite = blockCount;
-    if (usedBlockCountAfterWrite >= oldUsedBlockCount) {
+    if (usedBlockCountAfterWrite > oldUsedBlockCount) {
         LOGF("FirstFatEntry before expand= %i", currentFatAddress);
         for (int i = 0; i < usedBlockCountAfterWrite; i++) {
             if (currentFatAddress != -1) {
@@ -390,6 +397,10 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
                 LOGF("Try to expand, currentLastFatAddress: %i", currentLastFatAddress);
                 currentLastFatAddress = fmgr->expand(bd, currentLastFatAddress);
                 LOGF("CurrentLastAddress after expand: %i", currentLastFatAddress);
+                if (currentLastFatAddress == -1) {
+                    LOG("!!! NO FREE FAT ENTRY");
+                    return -ENOSPC;
+                }
                 if (inode->firstFatEntry == -1) {
                     inode->firstFatEntry = currentLastFatAddress;
                     LOG("Switched firstFatEntry");
@@ -404,18 +415,19 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         LOG("same amount of fatblocks needed");
     } else {
         LOG("fat has to be shortend");
-        for (int blocks = 0; blocks < usedBlockCountAfterWrite; blocks ++) {//for some reason crashes
-            LOGF("jumped over fat entry %u",fatPointer);
+        for (int blocks = 0; blocks < usedBlockCountAfterWrite - 1; blocks ++) {
+            LOGF("jumped over fat entry %i",fatPointer);
             fatPointer = fmgr->readFat(bd,fatPointer);
         }
-        int endPointer = fatPointer;
-        fatPointer = fmgr->readFat(bd,fatPointer);
-        fmgr->markEoF(bd,endPointer);
-
-        for(int blocks = usedBlockCountAfterWrite; blocks < oldUsedBlockCount; blocks++){
-            LOGF("cleared fat entry %u",fatPointer);
-            fatPointer= fmgr->readAndClearEntry(bd,fatPointer);
+       // fatPointer = fmgr->readFat(bd,fatPointer);
+        fatPointer = fmgr->readAndMarkEoF(bd,fatPointer);
+        LOGF("FatPointer: %i", fatPointer);
+        LOGF("Blocks: %i, oldUsedBlockCount: %i", usedBlockCountAfterWrite, oldUsedBlockCount);
+        while (fatPointer != -1) {
+            LOGF("cleared fat entry %i",fatPointer);
+            fatPointer = fmgr->readAndClearEntry(bd, fatPointer);
         }
+        LOG("End of shorten");
     } 
     
     // Update file Size
@@ -448,7 +460,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
     int i = 0;
 
     // Print complete data which to write
-    LOGF("Buffer: %s", buf);
+    //LOGF("Buffer: %s", buf);
 
     // Start to write
     while (restSize > 0) { // Still data to write 
@@ -484,7 +496,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         memcpy(textBlock + textBlockOffset, buf + bufOffset, writeSize);
         
         // Write textBlock to BlockDevice
-        LOGF("after memcpy textBlock = %s", textBlock);
+       // LOGF("after memcpy textBlock = %s", textBlock);
         bd->write(FIRST_DATA_ADDRESS + currentFatAddress, textBlock);
         LOG("after bd-write");
 
@@ -515,7 +527,14 @@ int MyFS::fuseFlush(const char *path, struct fuse_file_info *fileInfo) {
 
 int MyFS::fuseRelease(const char *path, struct fuse_file_info *fileInfo) {
     LOGM();
-    return 0;
+    if (openFiles > 0) {
+        openFiles--;
+        LOGF("Open files: %i", openFiles);
+        return 0;
+    } else {
+        LOG("Cant close more files! All files already closed!");
+        return 0;
+    }
 }
 
 int MyFS::fuseFsync(const char *path, int datasync, struct fuse_file_info *fi) {
