@@ -57,7 +57,11 @@ fabric.properties
 
 #build stuff
 obj/
+point/
+mount/
 mkfs.myfs
 mount.myfs
 *.bin
 *.txt
+
+videoTest\.mp4

@@ -56,7 +56,7 @@ public:
     int fuseInit(struct fuse_conn_info *conn);
     int fuseTruncate(const char *path, off_t offset, struct fuse_file_info *fileInfo);
     int fuseCreate(const char *, mode_t, struct fuse_file_info *);
-    void fuseDestroy();    
+    void fuseDestroy();  
 };
 
 #endif /* myfs_h */

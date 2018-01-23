@@ -1,4 +1,5 @@
 #include "inodeManager.h"
+#include "rootManager.h"
 #include "fsConfig.h"
 #include "blockdevice.h"
 #include <string.h>
@@ -16,7 +17,8 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
                                long ctime,
                                int firstFatEntry,
                                unsigned int userID,
-                               unsigned int groupID)
+                               unsigned int groupID,
+                               unsigned int mode)
 {
     InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
 
@@ -29,7 +31,8 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     inode->firstFatEntry = firstFatEntry;
     inode->userID = userID;
     inode->groupID = groupID;
-    inode->mode = S_IFREG | 0444;
+    inode->mode = mode;
+    inode->index = inodeIndex;
 
     std::cout << "File: " << fileName << std::endl
               << "Size: " << fileSize << "Byte" << std::endl
@@ -47,21 +50,54 @@ void InodeManager::createInode(BlockDevice *bd, int inodeIndex,
     }
 }
 
-InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, const char *fileName)
-{
+InodeBlockStruct* InodeManager::getInode(BlockDevice *bd, RootManager *rmgr, const char *fileName) {
     fileName++;
-    InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
-    for (int i = 0; i < MAX_FILES; i++ ){
-        bd->read(INODES_ADDRESS + i, (char*)node);
-        if (strcmp(node->fileName ,fileName) == 0){
-            return node;
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (rmgr->isValid(bd, i)) {
+            inode = getInodeByIndex(bd, i); 
+            if (strcmp(inode->fileName ,fileName) == 0){
+                return inode;
+            }
         }
     }
+
+    free(inode);
     return NULL;
+}
+
+InodeBlockStruct* InodeManager::getInodeByIndex(BlockDevice *bd, int index)
+{
+    InodeBlockStruct* node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+    bd->read(index + INODES_ADDRESS, (char *)node);
+    return node;
 }
 
 char* InodeManager::getFileName(BlockDevice *bd, int index){
     InodeBlockStruct *node = (InodeBlockStruct *)malloc(BLOCK_SIZE);
     bd->read(INODES_ADDRESS + index, (char*)node);
     return node->fileName;
+}
+
+void InodeManager::updateInode(BlockDevice *bd, InodeBlockStruct *inode) {
+    bd->write(INODES_ADDRESS + inode->index, (char*)inode);
+}
+
+InodeBlockStruct* InodeManager::clearValidInode(BlockDevice *bd, RootManager *rmgr, const char *fileName) {
+    fileName++;
+    InodeBlockStruct *inode = (InodeBlockStruct *)malloc(BLOCK_SIZE);
+
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (rmgr->isValid(bd, i)) {
+            inode = getInodeByIndex(bd, i); 
+            if (strcmp(inode->fileName ,fileName) == 0){
+                rmgr->setInode(bd, i, false);
+                return inode;
+            }
+        }
+    }
+
+    free(inode);
+    return NULL;
 }

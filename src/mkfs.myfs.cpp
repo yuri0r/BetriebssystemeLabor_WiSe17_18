@@ -104,6 +104,8 @@ void dataCreation(int argc, char *argv[])
                     }
                     addressCounter++;
                 }
+                fmgr->markEoF(bd, addressCounter - 1);
+
                 //set inode and root entries
                 struct stat fs;
                 stat(fileName, &fs);
@@ -118,16 +120,21 @@ void dataCreation(int argc, char *argv[])
                             fs.st_ctime,
                             firstEntry,
                             fs.st_uid,
-                            fs.st_gid);
+                            fs.st_gid,
+                            S_IFREG | 0444);
 
                 free(filebuffer);
             }
         }
         else
         {
-            std::cout << "File: " << argv[i] << "\nname allready in use! \n"
+            std::cout << "File: " << argv[i] << "\nname already in use! \n"
                       << std::endl;
         }
+    }
+    if(argc == 2){
+        char* null = (char*)calloc(BLOCK_SIZE,1);
+        bd->write(FIRST_DATA_ADDRESS, null);
     }
 }
 
