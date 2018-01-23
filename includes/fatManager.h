@@ -15,13 +15,15 @@ struct FatBlockStruct
 class FatManager{
     public:
         FatManager();
-        void writeFat(BlockDevice* bd, int start, int destination);
-        int markEoF(BlockDevice* bd, int entry);
-        int readFat(BlockDevice* bd, int position);
-        int expand(BlockDevice* bd, int currentLastFatAddress);
-        int readAndClearEntry(BlockDevice* bd, int entry);
+        int readFat(BlockDevice* bd, int index);
+        void writeFat(BlockDevice* bd, int index, int destinationIndex);
+        int markEoF(BlockDevice* bd, int index);
+        int expand(BlockDevice* bd, int currentLastIndex);
+        int clearIndex(BlockDevice* bd, int index);
     private:
-        int getFreeEntry(BlockDevice* bd);
+        int getFreeIndex(BlockDevice* bd);
+        int updateBuffer(BlockDevice* bd, int blockIndex);
+        void writeBuffer(BlockDevice* bd, int blockIndex);
 };
 
 #endif

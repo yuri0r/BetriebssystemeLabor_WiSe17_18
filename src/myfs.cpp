@@ -147,7 +147,7 @@ int MyFS::fuseUnlink(const char *path) {
         int currentFatAddress = inode->firstFatEntry;
         
         while (currentFatAddress != -1) {
-            currentFatAddress = fmgr->readAndClearEntry(bd, currentFatAddress);
+            currentFatAddress = fmgr->clearIndex(bd, currentFatAddress);
         }
        
         for (int i = 0; i < MAX_FILES; i++) {
@@ -390,7 +390,7 @@ int MyFS::fuseWrite(const char *path, const char *buf, size_t size, off_t offset
         LOGF("Blocks: %i, oldUsedBlockCount: %i", usedBlockCountAfterWrite, oldUsedBlockCount);
         while (fatPointer != -1) {
             LOGF("cleared fat entry %i",fatPointer);
-            fatPointer = fmgr->readAndClearEntry(bd, fatPointer);
+            fatPointer = fmgr->clearIndex(bd, fatPointer);
         }
         LOG("End of shorten");
     } 
