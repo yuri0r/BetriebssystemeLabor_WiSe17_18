@@ -80,8 +80,11 @@ int MyFS::fuseGetattr(const char *path, struct stat *statbuf) {
             statbuf->st_gid = inode->groupID;
             statbuf->st_size = inode->fileSize;
             statbuf->st_atime = inode->atime;
+            statbuf->st_atim.tv_nsec = inode->atime_nsec;
             statbuf->st_ctime = inode->ctime;
+            statbuf->st_ctim.tv_nsec = inode->ctime_nsec;
             statbuf->st_mtime = inode->mtime;
+            statbuf->st_mtim.tv_nsec = inode->mtime_nsec;
             statbuf->st_mode = inode->mode;
             //LOGF("# FirstFatEntry: %i", inode->firstFatEntry);
             //LOG("# Get atrributs went successfull");

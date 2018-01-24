@@ -13,8 +13,11 @@ struct InodeBlockStruct // Bytes: 256  + 3 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 32 + 32
     long usedBlocksCount;               // how many 512B Blocks
     unsigned int mode; // rwx
     long atime;                         // last access
+    unsigned long atime_nsec;
     long mtime;                         // last modification
+    unsigned long mtime_nsec;
     long ctime;                         // last modification of status
+    unsigned long ctime_nsec;
     int firstFatEntry;                  // pointer to fat
     unsigned int userID;                // id Of user
     unsigned int groupID;               // id of group
@@ -25,6 +28,7 @@ class InodeManager
 {
   public:
     InodeManager();
+
     void createInode(BlockDevice *bd,
                      int inodeIndex,
                      char *fileName,
@@ -33,6 +37,22 @@ class InodeManager
                      long atime,
                      long mtime,
                      long ctime,
+                     int firstFatEntry,
+                     unsigned int userID,
+                     unsigned int groupID,
+                     unsigned int mode);
+                     
+    void createInode(BlockDevice *bd,
+                     int inodeIndex,
+                     char *fileName,
+                     long fileSize,
+                     long usedBlocksCount,
+                     long atime,
+                     unsigned long atime_nsec,
+                     long mtime,
+                     unsigned long mtime_nsec,
+                     long ctime,
+                     unsigned long ctime_nsec,
                      int firstFatEntry,
                      unsigned int userID,
                      unsigned int groupID,
