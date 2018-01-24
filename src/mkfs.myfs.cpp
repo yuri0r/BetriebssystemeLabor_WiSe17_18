@@ -99,7 +99,7 @@ void dataCreation(int argc, char *argv[])
                     int j = i + BLOCK_SIZE;
                     if (j < size)
                     {
-                        fmgr->writeFat(bd, FIRST_DATA_ADDRESS + addressCounter, FIRST_DATA_ADDRESS + addressCounter + 1);
+                        fmgr->writeFat(bd, addressCounter, addressCounter + 1);
                         blocksUsed++;
                     }
                     addressCounter++;
