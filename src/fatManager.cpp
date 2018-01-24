@@ -2,119 +2,98 @@
 #include <string.h>
 #include <iostream>
 
-FatManager::FatManager() {}
+FatBlockStruct *fbBuffer;
+int bufferBlockIndex;
 
-void FatManager::writeFat(BlockDevice* bd, int start, int destination) {
-    int fatBlockCount = (start - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int startIndex = (start - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
+FatManager::FatManager() {
+    fbBuffer = (FatBlockStruct *)malloc(BLOCK_SIZE);
+    bufferBlockIndex = -1;
+}
 
-    int destinationBlock = (destination - FIRST_DATA_ADDRESS) / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = (destination - FIRST_DATA_ADDRESS) % ADDRESS_COUNT_PER_FAT_BLOCK;
+void FatManager::writeFat(BlockDevice* bd, int index, int destinationIndex) {
+    int blockIndex = index / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int inBlockIndex = index % ADDRESS_COUNT_PER_FAT_BLOCK;
 
-    int destinationIndex = destinationBlock * ADDRESS_COUNT_PER_FAT_BLOCK + destinationCount;
-
-    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
-
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
+    updateBuffer(bd, blockIndex);
     
-    fb->destination[startIndex] = destinationIndex;
+    fbBuffer->destination[inBlockIndex] = destinationIndex;
 
-    bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-
-    free(fb);
+    writeBuffer(bd, blockIndex);
 }
 
-int FatManager::readFat(BlockDevice* bd, int position) {
-    int fatBlockCount = position / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = position % ADDRESS_COUNT_PER_FAT_BLOCK;
+int FatManager::readFat(BlockDevice* bd, int index) {
+    int blockIndex = index / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int inBlockIndex = index % ADDRESS_COUNT_PER_FAT_BLOCK;
 
-    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
+    updateBuffer(bd, blockIndex);
 
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-    int returnValue = fb->destination[destinationCount];
-    free(fb);
-    return returnValue;
+    return fbBuffer->destination[inBlockIndex];
 }
 
-int FatManager::expand(BlockDevice* bd, int currentLastFatAddress) {
-    int fatBlockCount = currentLastFatAddress / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = currentLastFatAddress % ADDRESS_COUNT_PER_FAT_BLOCK;
+int FatManager::expand(BlockDevice* bd, int currentLastIndex) {
+    int nextIndex = getFreeIndex(bd);
 
-    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
-    int nextFreeEntry = getFreeEntry(bd);
-
-    if (nextFreeEntry == -1) {
-        // No fat block is empty
+    if (nextIndex == -1) {  // No free FAT block
         return -1;
     }
 
-    if (currentLastFatAddress != -1) {
-        writeFat(bd, currentLastFatAddress + FIRST_DATA_ADDRESS, nextFreeEntry + FIRST_DATA_ADDRESS);
-    } 
+    if (currentLastIndex != -1) {
+        writeFat(bd, currentLastIndex, nextIndex);
+    } // else this is the first FAT block for this file
 
-    free(fb);
-    return nextFreeEntry;
+    return nextIndex;
 }
 
-int FatManager::getFreeEntry(BlockDevice* bd) {
-    for (int position = 0; position < (FAT_SIZE * ADDRESS_COUNT_PER_FAT_BLOCK); position++) {
-        int nextEntry = readFat(bd, position);
+int FatManager::getFreeIndex(BlockDevice* bd) {
+    int destinationIndex = -1;
 
-        if (nextEntry == 0) {
-            markEoF(bd, position);
-            return position;
+    for (int index = 0; index < (FAT_SIZE * ADDRESS_COUNT_PER_FAT_BLOCK); index++) {
+        destinationIndex = readFat(bd, index);
+
+        if (destinationIndex == 0) { // Entry is free
+            markEoF(bd, index);
+            return index;
         }
     }
 
-    // No fat block is empty
-    return -1;
+    return -1; // No free FAT block
 }
 
-void FatManager::markEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != FatAddress
+int FatManager::markEoF(BlockDevice* bd, int index){ // Entry = DataAddress != FatAddress
+    int blockIndex = index / ADDRESS_COUNT_PER_FAT_BLOCK; 
+    int inBlockIndex = index % ADDRESS_COUNT_PER_FAT_BLOCK; 
 
-    int fatBlock = entry / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys
-    int blockOffset = entry % ADDRESS_COUNT_PER_FAT_BLOCK; //which of the entries in a block
+    updateBuffer(bd, blockIndex);
+ 
+    int oldDestinationIndex = fbBuffer->destination[inBlockIndex];
 
-    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
+    fbBuffer->destination[inBlockIndex] = -1;
+    writeBuffer(bd, blockIndex);
 
-    bd->read(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
-
-    //std::cout << "EoF FatEntry: " << (fatBlock * ADDRESS_COUNT_PER_FAT_BLOCK) + blockOffset << std::endl; 
-    fb->destination[blockOffset] = -1; //checking for > 0 is fast  
-
-    bd->write(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
-    free(fb);
+    return oldDestinationIndex;
 }
 
-int FatManager::readAndMarkEoF(BlockDevice* bd, int entry){ // Entry = DataAddress != FatAddress
+int FatManager::clearIndex(BlockDevice* bd, int index) {
+    int blockIndex = index / ADDRESS_COUNT_PER_FAT_BLOCK;
+    int inBlockIndex = index % ADDRESS_COUNT_PER_FAT_BLOCK;
 
-    int fatBlock = entry / ADDRESS_COUNT_PER_FAT_BLOCK; //fat block which contains entrys
-    int blockOffset = entry % ADDRESS_COUNT_PER_FAT_BLOCK; //which of the entries in a block
+    updateBuffer(bd, blockIndex);
 
-    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
+    int oldDestinationIndex = fbBuffer->destination[inBlockIndex];
 
-    bd->read(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
-
-    std::cout << "EoF FatEntry: " << (fatBlock * ADDRESS_COUNT_PER_FAT_BLOCK) + blockOffset << std::endl; 
-    int oldDestination = fb->destination[blockOffset];
-    fb->destination[blockOffset] = -1; //checking for > 0 is fast  
-
-    bd->write(FIRST_FAT_ADDRESS + fatBlock, (char *)fb);
-    free(fb);
-    return oldDestination;
-}
-
-int FatManager::readAndClearEntry(BlockDevice* bd, int entry) {
-    int fatBlockCount = entry / ADDRESS_COUNT_PER_FAT_BLOCK;
-    int destinationCount = entry % ADDRESS_COUNT_PER_FAT_BLOCK;
-
-    FatBlockStruct *fb = (FatBlockStruct *)malloc(BLOCK_SIZE);
-
-    bd->read(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-    int returnValue = fb->destination[destinationCount];
-    fb->destination[destinationCount] = 0;
-    bd->write(FIRST_FAT_ADDRESS + fatBlockCount, (char *)fb);
-    free(fb);
+    fbBuffer->destination[inBlockIndex] = 0;
+    writeBuffer(bd, blockIndex);
     
-    return returnValue;
+    return oldDestinationIndex;
+}
+
+int FatManager::updateBuffer(BlockDevice* bd, int blockIndex) {
+    if (blockIndex != bufferBlockIndex) {
+        bd->read(FIRST_FAT_ADDRESS + blockIndex, (char *)fbBuffer);
+        bufferBlockIndex = blockIndex;
+    }
+}
+
+void FatManager::writeBuffer(BlockDevice* bd, int blockIndex) {
+    bd->write(FIRST_FAT_ADDRESS + blockIndex, (char *)fbBuffer);
 }
