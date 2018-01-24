@@ -8,10 +8,27 @@ copyFiles=README.md
 log=log.txt
 
 cd $mountPoint/
-touch test1.txt
-touch test2.txt
-for i in `seq 300`; do 
-	echo $i 1 >> test1.txt; 
-	echo $i 2 >> test2.txt;
+rm *
+echo testing max files
+for i in `seq 64`; do
+	touch test${i}.txt;
+	echo $i >> test${i}.txt; 
 done;
+echo 64 files createtd
+ls -l
+echo test results press key to continiu
+read -n 1 -s
 
+
+echo testing mixed writing
+rm *
+touch file1.txt
+touch file2.txt
+
+for i in `seq 256`; do
+	echo 12345678 >> file1.txt;
+	echo 23456789 >> file2.txt;
+done;
+echo test complete press any key to finisch and clean up
+read -n 1 -s
+rm *
