@@ -121,7 +121,7 @@ void dataCreation(int argc, char *argv[])
                             firstEntry,
                             fs.st_uid,
                             fs.st_gid,
-                            S_IFREG | 0444);
+                            fs.st_mode);
 
                 free(filebuffer);
             }
