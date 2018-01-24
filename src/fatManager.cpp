@@ -4,6 +4,7 @@
 
 FatBlockStruct *fbBuffer;
 int bufferBlockIndex;
+bool dmap[FAT_SIZE*ADDRESS_COUNT_PER_FAT_BLOCK] = {0};
 
 FatManager::FatManager() {
     fbBuffer = (FatBlockStruct *)malloc(BLOCK_SIZE);
@@ -17,6 +18,7 @@ void FatManager::writeFat(BlockDevice* bd, int index, int destinationIndex) {
     updateBuffer(bd, blockIndex);
     
     fbBuffer->destination[inBlockIndex] = destinationIndex;
+    dmap[index] = 1;
 
     writeBuffer(bd, blockIndex);
 }
@@ -47,10 +49,9 @@ int FatManager::expand(BlockDevice* bd, int currentLastIndex) {
 int FatManager::getFreeIndex(BlockDevice* bd) {
     int destinationIndex = -1;
 
-    for (int index = 0; index < (FAT_SIZE * ADDRESS_COUNT_PER_FAT_BLOCK); index++) {
-        destinationIndex = readFat(bd, index);
+    for (long index = 0; index < (FAT_SIZE * ADDRESS_COUNT_PER_FAT_BLOCK); index++) {
 
-        if (destinationIndex == 0) { // Entry is free
+        if (dmap[index] == 0) { // Entry is free
             markEoF(bd, index);
             return index;
         }
@@ -69,6 +70,7 @@ int FatManager::markEoF(BlockDevice* bd, int index){ // Entry = DataAddress != F
 
     fbBuffer->destination[inBlockIndex] = -1;
     writeBuffer(bd, blockIndex);
+    dmap[index] = 1;
 
     return oldDestinationIndex;
 }
@@ -83,6 +85,7 @@ int FatManager::clearIndex(BlockDevice* bd, int index) {
 
     fbBuffer->destination[inBlockIndex] = 0;
     writeBuffer(bd, blockIndex);
+    dmap[index] = 0;
     
     return oldDestinationIndex;
 }
