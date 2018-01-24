@@ -108,7 +108,7 @@ void dataCreation(int argc, char *argv[])
 
                 //set inode and root entries
                 struct stat fs;
-                stat(fileName, &fs);
+                stat(argv[i], &fs);
 
                 rmgr->setInode(bd, i - 2, true); //marks inode as valid in root
                 imgr->createInode(bd, i - 2,
