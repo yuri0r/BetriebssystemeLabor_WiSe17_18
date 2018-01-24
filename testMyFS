@@ -1,0 +1,17 @@
+#!/bin/bash
+#use inside git repo
+#make sure that old fusemountpoint is unmounted (fusermount -u)
+mountPoint=point
+containerFile=container.bin
+inputFiles=Test*
+copyFiles=README.md
+log=log.txt
+
+cd $mountPoint/
+touch test1.txt
+touch test2.txt
+for i in `seq 300`; do 
+	echo $i 1 >> test1.txt; 
+	echo $i 2 >> test2.txt;
+done;
+

@@ -21,14 +21,8 @@ cp $copyFiles $mountPoint/$copyFiles
 cd $mountPoint/
 touch hello.txt
 touch hallo.txt
-for i in `seq 1 50`	; do echo $i hallo >>hallo.txt ; done;
-for i in `seq 1 50`	; do echo $i hello >>hello.txt ; done;
-for i in `seq 51 100`	; do echo $i hello >>hello.txt ; done;
-for i in `seq 51 100`	; do echo $i hallo >>hallo.txt ; done;
-for i in `seq 100 200`	; do echo $i hallo >>hallo.txt ; done;
-for i in `seq 100 200`	; do echo $i hello >>hello.txt ; done;
-for i in `seq 201 400`	; do echo $i hello >>hello.txt ; done;
-for i in `seq 201 400`	; do echo $i hallo >>hallo.txt ; done;
+for i in `seq 10`; do echo $i hallo >>hallo.txt ; done;
+for i in `seq 10`; do echo $i hello >>hello.txt ; done;
 
 cd ..
 printf "\nwordcount inputfiles:\n"
